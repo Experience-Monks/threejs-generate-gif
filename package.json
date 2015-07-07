@@ -9,7 +9,9 @@
     "email": "davidt@jam3.com",
     "url": "https://github.com/eternallite"
   },
-  "dependencies": {},
+  "dependencies": {
+    "omggif": "^1.0.8"
+  },
   "devDependencies": {},
   "scripts": {
     "test": "beefy test.js --live --open"
