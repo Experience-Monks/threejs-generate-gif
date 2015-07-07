@@ -22,10 +22,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/eternallite/threejs-generate-gif.git"
+    "url": "git://github.com/Jam3/threejs-generate-gif.git"
   },
-  "homepage": "https://github.com/eternallite/threejs-generate-gif",
+  "homepage": "https://github.com/Jam3/threejs-generate-gif",
   "bugs": {
-    "url": "https://github.com/eternallite/threejs-generate-gif/issues"
+    "url": "https://github.com/Jam3/threejs-generate-gif/issues"
   }
 }
