@@ -12,7 +12,9 @@
   "dependencies": {
     "omggif": "^1.0.8"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "three": "^0.71.0"
+  },
   "scripts": {
     "test": "beefy test.js --live --open"
   },
