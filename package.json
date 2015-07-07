@@ -1,0 +1,31 @@
+{
+  "name": "threejs-generate-gif",
+  "version": "1.0.0",
+  "description": "Generate an animated GIF from a threejs scene",
+  "main": "index.js",
+  "license": "MIT",
+  "author": {
+    "name": "David Tran",
+    "email": "davidt@jam3.com",
+    "url": "https://github.com/eternallite"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "beefy test.js --live --open"
+  },
+  "keywords": [
+    "threejs",
+    "gif",
+    "generate",
+    "scene"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/eternallite/threejs-generate-gif.git"
+  },
+  "homepage": "https://github.com/eternallite/threejs-generate-gif",
+  "bugs": {
+    "url": "https://github.com/eternallite/threejs-generate-gif/issues"
+  }
+}
