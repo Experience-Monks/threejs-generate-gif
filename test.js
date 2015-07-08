@@ -67,7 +67,14 @@ function init() {
     var opts = {
         frames: frames
     };
-    gifGenerator = new GIFGenerator(renderer, opts);
+
+    function receiveImageURI(str) {
+        var image = document.createElement('img');
+        image.src = str;
+        document.body.appendChild(image);
+    }
+
+    gifGenerator = new GIFGenerator(renderer, opts, receiveImageURI);
 
     gifGenerator.init();
     animate();
