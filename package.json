@@ -10,6 +10,7 @@
     "url": "https://github.com/eternallite"
   },
   "dependencies": {
+    "clamp": "^1.0.1",
     "omggif": "^1.0.8"
   },
   "devDependencies": {

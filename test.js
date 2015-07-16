@@ -5,7 +5,7 @@ var gifGenerator;
 
 var camera, scene, renderer, mesh;
 
-var width = height = 500;
+var width = height = 300;
 var time = 0;
 var frames = 100;
 var current = 0;
@@ -27,13 +27,17 @@ function animate() {
         gifGenerator.finish();
     }
     current++;
+    console.log(current);
 }
 
 function render() {
     time = time + 0.01 % 1;
 
-    mesh.rotation.x = time * 360 * (Math.PI / 180);
-    mesh.rotation.y = -time * 360 * (Math.PI / 180);
+    meshGreen.position.x = Math.cos((time + 0.5) * Math.PI * 2) * 200;
+    meshGreen.position.y = Math.sin((time + 0.5) * Math.PI * 2) * 200;
+
+    meshBlue.position.x = Math.cos(time * Math.PI * 2) * 200;
+    meshBlue.position.y = Math.sin(time * Math.PI * 2) * 200;
 
     renderer.render(scene, camera);
 }
@@ -45,9 +49,19 @@ function init() {
 
     scene = new THREE.Scene();
 
-    var geometry = new THREE.BoxGeometry(200, 200, 200);
+    var geometry = new THREE.SphereGeometry(200, 64, 32);
     var material = new THREE.MeshPhongMaterial({
         color: 0xff0000,
+        side: THREE.DoubleSide,
+    });
+
+    var materialGreen = new THREE.MeshPhongMaterial({
+        color: 0x00ff00,
+        side: THREE.DoubleSide,
+    });
+
+    var materialBlue = new THREE.MeshPhongMaterial({
+        color: 0x0000ff,
         side: THREE.DoubleSide,
     });
 
@@ -58,14 +72,23 @@ function init() {
     scene.add( light2 );
 
     mesh = new THREE.Mesh(geometry, material);
+    meshGreen = new THREE.Mesh(geometry, materialGreen);
+    meshBlue = new THREE.Mesh(geometry, materialBlue);
     scene.add(mesh);
+    scene.add(meshGreen);
+    scene.add(meshBlue);
+
+    meshGreen.position.set(200, 0, 0);
+    meshBlue.position.set(-200, 0, 0);
 
     renderer = new THREE.WebGLRenderer();
-    renderer.setClearColor(0xffffff, 1);
+    renderer.setClearColor(0x7f7f7f, 1);
     renderer.setSize(width, height);
 
     var opts = {
-        frames: frames
+        frames: frames,
+        size: {width: width, height: height},
+        recalculatePalettePerFrame: false
     };
 
     function receiveImageURI(str) {
