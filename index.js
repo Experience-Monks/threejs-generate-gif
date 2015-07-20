@@ -18,7 +18,7 @@ function GIFGenerator(renderer, opts, callback) {
 
     this.callback = callback;
 
-    this.denominator = 4;
+    this.denominator = 16;
     this.quantizedLevels = 256 / this.denominator;
 }
 
@@ -163,15 +163,19 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
         this.buildPalette(data);
     } 
 
+    var ditherStrength = 5;
+    var width = this.size.width;
+
     for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
+        var index = ~~(k + k / width);
 
-        //var r = Math.floor(clamp(data[i + 0] + (k % 4) - 2, 0, 255) / this.denominator) * this.denominator;
-        //var g = Math.floor(clamp(data[i + 1] + (k % 6) - 3, 0, 255) / this.denominator) * this.denominator;
-        //var b = Math.floor(clamp(data[i + 2] + (k % 8) - 4, 0, 255) / this.denominator) * this.denominator;
+        var r = Math.floor(clamp(data[i + 0] + ((index % 2) - 1) * ditherStrength, 0, 255) / this.denominator) * this.denominator;
+        var g = Math.floor(clamp(data[i + 1] + (((index + 1) % 2) - 1) * ditherStrength, 0, 255) / this.denominator) * this.denominator;
+        var b = Math.floor(clamp(data[i + 2] + (((index + 2) % 2) - 1) * ditherStrength, 0, 255) / this.denominator) * this.denominator;
 
-        var r = Math.floor(data[i + 0] / this.denominator) * this.denominator;
-        var g = Math.floor(data[i + 1] / this.denominator) * this.denominator;
-        var b = Math.floor(data[i + 2] / this.denominator) * this.denominator;
+        //var r = Math.floor(data[i + 0] / this.denominator) * this.denominator;
+        //var g = Math.floor(data[i + 1] / this.denominator) * this.denominator;
+        //var b = Math.floor(data[i + 2] / this.denominator) * this.denominator;
         
         this.pixels[k] = this.globalPaletteMap[this.rgb2index(r, g, b)];
     }
