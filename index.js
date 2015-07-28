@@ -5,6 +5,8 @@ function GIFGenerator(renderer, opts, callback) {
     
     opts = opts || {};
     this.recalculatePalettePerFrame = opts.recalculatePalettePerFrame;
+    this.dither = opts.dither;
+    this.superSample = opts.superSample;
 
     this.renderer = renderer;
     this.generating = false;
@@ -15,7 +17,7 @@ function GIFGenerator(renderer, opts, callback) {
     this.renderTarget = opts.renderTarget;
 
     this.size = opts.size || {width: 500, height: 500};
-    this.doubleSize = {width: this.size.width * 2, height: this.size.height * 2};
+    this.doubleSize = this.superSample? {width: this.size.width * 2, height: this.size.height * 2} : this.size;
 
     this.callback = callback;
 
@@ -153,34 +155,39 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
         this.renderer.setRenderTarget(this.renderTarget);
         this.context3d.readPixels(0, 0, this.doubleSize.width, this.doubleSize.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
-        var srcWidth = this.doubleSize.width;
-        var srcHeight = this.doubleSize.height;
+        if (this.superSample) {
+            var srcWidth = this.doubleSize.width;
+            var srcHeight = this.doubleSize.height;
 
-        var destWidth = this.size.width;
-        var destHeight = this.size.height;
+            var destWidth = this.size.width;
+            var destHeight = this.size.height;
 
-        function getSrcIndex(destIndex, offsetX, offsetY) {
-            var destPixelIndex = ~~(destIndex / 4);
-            var destX = destPixelIndex % destWidth;
-            var destY = ~~(destPixelIndex / destWidth);
+            function getSrcIndex(destIndex, offsetX, offsetY) {
+                var destPixelIndex = ~~(destIndex / 4);
+                var destX = destPixelIndex % destWidth;
+                var destY = ~~(destPixelIndex / destWidth);
 
-            var srcX = destX * 2 + offsetX;
-            var srcY = destY * 2 + offsetY;
-            var srcPixelIndex = srcY * srcWidth + srcX;
+                var srcX = destX * 2 + offsetX;
+                var srcY = destY * 2 + offsetY;
+                var srcPixelIndex = srcY * srcWidth + srcX;
 
-            var srcIndex = srcPixelIndex * 4 + (destIndex % 4);
-            return srcIndex;
+                var srcIndex = srcPixelIndex * 4 + (destIndex % 4);
+                return srcIndex;
+            }
+
+            var l =  this.imageDataArrayDest.length;
+            for (var i = 0; i < l; i++) {
+                this.imageDataArrayDest[i] = ~~((this.imageDataArraySource[getSrcIndex(i, 0, 0)] +
+                this.imageDataArraySource[getSrcIndex(i, 1, 0)] +
+                this.imageDataArraySource[getSrcIndex(i, 0, 1)] +
+                this.imageDataArraySource[getSrcIndex(i, 1, 1)]) / 4);
+            }
+
+            this.imageData.data.set(this.imageDataArrayDest);
+        } else {
+            this.imageData.data.set(this.imageDataArraySource);
         }
-
-        var l =  this.imageDataArrayDest.length;
-        for (var i = 0; i < l; i++) {
-            this.imageDataArrayDest[i] = ~~((this.imageDataArraySource[getSrcIndex(i, 0, 0)] +
-            this.imageDataArraySource[getSrcIndex(i, 1, 0)] +
-            this.imageDataArraySource[getSrcIndex(i, 0, 1)] +
-            this.imageDataArraySource[getSrcIndex(i, 1, 1)]) / 4);
-        }
-
-        this.imageData.data.set(this.imageDataArrayDest);
+        
         this.context2d.putImageData(this.imageData, 0, 0);
 
     } else {
@@ -194,20 +201,16 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
         this.buildPalette(data);
     } 
 
-    var ditherStrength = 8;
+    var ditherStrength = this.dither? 8 : 0;
     var width = this.size.width;
 
     for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
         var index = ~~(k + k / width);
 
-        var r = Math.floor(clamp(data[i + 0] + ((index % 2) - 1) * ditherStrength, 0, 255) / this.denominator) * this.denominator;
-        var g = Math.floor(clamp(data[i + 1] + (((index + 1) % 2) - 1) * ditherStrength, 0, 255) / this.denominator) * this.denominator;
-        var b = Math.floor(clamp(data[i + 2] + (((index + 2) % 2) - 1) * ditherStrength, 0, 255) / this.denominator) * this.denominator;
+        var r = Math.floor(clamp(data[i + 0] + ditherStrength * ((index % 2) - 1), 0, 255) / this.denominator) * this.denominator;
+        var g = Math.floor(clamp(data[i + 1] + ditherStrength * (((index + 1) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
+        var b = Math.floor(clamp(data[i + 2] + ditherStrength * (((index + 2) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
 
-        //var r = Math.floor(data[i + 0] / this.denominator) * this.denominator;
-        //var g = Math.floor(data[i + 1] / this.denominator) * this.denominator;
-        //var b = Math.floor(data[i + 2] / this.denominator) * this.denominator;
-        
         this.pixels[k] = this.globalPaletteMap[this.rgb2index(r, g, b)];
     }
 
