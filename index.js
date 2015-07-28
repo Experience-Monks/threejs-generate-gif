@@ -17,7 +17,7 @@ function GIFGenerator(renderer, opts, callback) {
     this.renderTarget = opts.renderTarget;
 
     this.size = opts.size || {width: 500, height: 500};
-    this.doubleSize = this.superSample? {width: this.size.width * 2, height: this.size.height * 2} : this.size;
+    this.doubleSize = this.superSample ? {width: this.size.width * 2, height: this.size.height * 2} : this.size;
 
     this.callback = callback;
 
@@ -60,9 +60,9 @@ GIFGenerator.prototype.buildPalette = function(data) {
     this.globalPaletteMap = new Uint8Array(Math.pow(this.quantizedLevels, 3));
 
     var cursor = 0; 
-    for (var ir = 0; ir < 256; ir+=this.denominator) {
-        for (var ig = 0; ig < 256; ig+=this.denominator) {
-            for (var ib = 0; ib < 256; ib+=this.denominator) {
+    for (var ir = 0; ir < 256; ir += this.denominator) {
+        for (var ig = 0; ig < 256; ig += this.denominator) {
+            for (var ib = 0; ib < 256; ib += this.denominator) {
                 
                 this.globalPaletteMap[cursor] = this.findClosestIndex(ir, ig, ib, palette);
                 cursor++;                
@@ -77,8 +77,8 @@ GIFGenerator.prototype.init = function() {
     this.generating = true;
 
     var canvas = document.createElement('canvas');
-    canvas.width =  this.size.width; //this.renderer.domElement.width;
-    canvas.height =  this.size.height; //this.renderer.domElement.height;
+    canvas.width = this.size.width; //this.renderer.domElement.width;
+    canvas.height = this.size.height; //this.renderer.domElement.height;
 
     var context2d = canvas.getContext('2d');
 
@@ -146,7 +146,20 @@ GIFGenerator.prototype.rgb2index = function(r, g, b) {
     b = Math.floor(b / this.denominator);
 
     return r * this.quantizedLevels * this.quantizedLevels + g * this.quantizedLevels + b;
-}
+};
+
+GIFGenerator.prototype.getSrcIndex = function(destIndex, offsetX, offsetY) {
+    var destPixelIndex = ~~(destIndex / 4);
+    var destX = destPixelIndex % this.destWidth;
+    var destY = ~~(destPixelIndex / this.destWidth);
+
+    var srcX = destX * 2 + offsetX;
+    var srcY = destY * 2 + offsetY;
+    var srcPixelIndex = srcY * this.srcWidth + srcX;
+
+    var srcIndex = srcPixelIndex * 4 + (destIndex % 4);
+    return srcIndex;
+};
 
 GIFGenerator.prototype.addFrame = function(recalculatePalette) {
 
@@ -156,31 +169,14 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
         this.context3d.readPixels(0, 0, this.doubleSize.width, this.doubleSize.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
         if (this.superSample) {
-            var srcWidth = this.doubleSize.width;
-            var srcHeight = this.doubleSize.height;
+            this.srcWidth = this.doubleSize.width;
+            this.destWidth = this.size.width;           
 
-            var destWidth = this.size.width;
-            var destHeight = this.size.height;
-
-            function getSrcIndex(destIndex, offsetX, offsetY) {
-                var destPixelIndex = ~~(destIndex / 4);
-                var destX = destPixelIndex % destWidth;
-                var destY = ~~(destPixelIndex / destWidth);
-
-                var srcX = destX * 2 + offsetX;
-                var srcY = destY * 2 + offsetY;
-                var srcPixelIndex = srcY * srcWidth + srcX;
-
-                var srcIndex = srcPixelIndex * 4 + (destIndex % 4);
-                return srcIndex;
-            }
-
-            var l =  this.imageDataArrayDest.length;
-            for (var i = 0; i < l; i++) {
-                this.imageDataArrayDest[i] = ~~((this.imageDataArraySource[getSrcIndex(i, 0, 0)] +
-                this.imageDataArraySource[getSrcIndex(i, 1, 0)] +
-                this.imageDataArraySource[getSrcIndex(i, 0, 1)] +
-                this.imageDataArraySource[getSrcIndex(i, 1, 1)]) / 4);
+            for (var i = 0, l = this.imageDataArrayDest.length; i < l; i++) {
+                this.imageDataArrayDest[i] = ~~((this.imageDataArraySource[this.getSrcIndex(i, 0, 0)] +
+                this.imageDataArraySource[this.getSrcIndex(i, 1, 0)] +
+                this.imageDataArraySource[this.getSrcIndex(i, 0, 1)] +
+                this.imageDataArraySource[this.getSrcIndex(i, 1, 1)]) / 4);
             }
 
             this.imageData.data.set(this.imageDataArrayDest);
@@ -201,7 +197,7 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
         this.buildPalette(data);
     } 
 
-    var ditherStrength = this.dither? 8 : 0;
+    var ditherStrength = this.dither ? 8 : 0;
     var width = this.size.width;
 
     for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
@@ -215,12 +211,14 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
     }
 
     var powof2 = 1;
-    while (powof2 < this.palette.length) powof2 <<= 1;
+    while (powof2 < this.palette.length) {
+        powof2 <<= 1;
+    }
     this.palette.length = powof2;
 
     this.gif.addFrame(0, 0, this.size.width, this.size.height, this.pixels, {
         palette: new Uint32Array(this.palette.map(function(element) { 
-            return element? element[0] : 0;
+            return element ? element[0] : 0;
         })),
         delay: this.delay
     });
