@@ -15,6 +15,7 @@ function GIFGenerator(renderer, opts, callback) {
     this.renderTarget = opts.renderTarget;
 
     this.size = opts.size || {width: 500, height: 500};
+    this.doubleSize = {width: this.size.width * 2, height: this.size.height * 2};
 
     this.callback = callback;
 
@@ -79,21 +80,24 @@ GIFGenerator.prototype.init = function() {
 
     var context2d = canvas.getContext('2d');
 
-    var buffer = new Uint8Array(canvas.width * canvas.height * this.frames * 5);
-    var gif = new OMGGIF.GifWriter(buffer, canvas.width, canvas.height, {
+    var buffer = new Uint8Array(this.size.width * this.size.height * this.frames * 5);
+    var gif = new OMGGIF.GifWriter(buffer, this.size.width, this.size.height, {
         loop: 0
     });
 
-    var pixels = new Uint8Array(canvas.width * canvas.height);
+    var pixels = new Uint8Array(this.size.width * this.size.height);
 
     if (this.renderTarget)
     {
         var context3d = this.renderer.getContext();
-        var imageDataArray = new Uint8Array(this.size.width * this.size.height * 4);
+        var imageDataArraySource = new Uint8Array(this.doubleSize.width * this.doubleSize.height * 4);
+        var imageDataArrayDest = new Uint8Array(this.size.width * this.size.height * 4);
+
         var imageData = context2d.createImageData(this.size.width, this.size.height);
 
         this.context3d = context3d;
-        this.imageDataArray = imageDataArray;
+        this.imageDataArraySource = imageDataArraySource;
+        this.imageDataArrayDest = imageDataArrayDest;
         this.imageData = imageData;
     }
 
@@ -147,9 +151,36 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
     if (this.renderTarget) {
 
         this.renderer.setRenderTarget(this.renderTarget);
-        this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArray);
+        this.context3d.readPixels(0, 0, this.doubleSize.width, this.doubleSize.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
-        this.imageData.data.set(this.imageDataArray);
+        var srcWidth = this.doubleSize.width;
+        var srcHeight = this.doubleSize.height;
+
+        var destWidth = this.size.width;
+        var destHeight = this.size.height;
+
+        function getSrcIndex(destIndex, offsetX, offsetY) {
+            var destPixelIndex = ~~(destIndex / 4);
+            var destX = destPixelIndex % destWidth;
+            var destY = ~~(destPixelIndex / destWidth);
+
+            var srcX = destX * 2 + offsetX;
+            var srcY = destY * 2 + offsetY;
+            var srcPixelIndex = srcY * srcWidth + srcX;
+
+            var srcIndex = srcPixelIndex * 4 + (destIndex % 4);
+            return srcIndex;
+        }
+
+        var l =  this.imageDataArrayDest.length;
+        for (var i = 0; i < l; i++) {
+            this.imageDataArrayDest[i] = ~~((this.imageDataArraySource[getSrcIndex(i, 0, 0)] +
+            this.imageDataArraySource[getSrcIndex(i, 1, 0)] +
+            this.imageDataArraySource[getSrcIndex(i, 0, 1)] +
+            this.imageDataArraySource[getSrcIndex(i, 1, 1)]) / 4);
+        }
+
+        this.imageData.data.set(this.imageDataArrayDest);
         this.context2d.putImageData(this.imageData, 0, 0);
 
     } else {
@@ -157,13 +188,13 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
         this.context2d.drawImage(this.renderer.domElement, 0, 0);
     }  
 
-    var data = this.context2d.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
+    var data = this.context2d.getImageData(0, 0, this.size.width, this.size.height).data;
 
     if (!this.globalPaletteMap || this.recalculatePalettePerFrame || recalculatePalette) {
         this.buildPalette(data);
     } 
 
-    var ditherStrength = 5;
+    var ditherStrength = 8;
     var width = this.size.width;
 
     for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
@@ -184,7 +215,7 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
     while (powof2 < this.palette.length) powof2 <<= 1;
     this.palette.length = powof2;
 
-    this.gif.addFrame(0, 0, this.canvas.width, this.canvas.height, this.pixels, {
+    this.gif.addFrame(0, 0, this.size.width, this.size.height, this.pixels, {
         palette: new Uint32Array(this.palette.map(function(element) { 
             return element? element[0] : 0;
         })),
