@@ -1,6 +1,6 @@
 {
   "name": "threejs-generate-gif",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Generate an animated GIF from a threejs scene",
   "main": "index.js",
   "license": "MIT",
