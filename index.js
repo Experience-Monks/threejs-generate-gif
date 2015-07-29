@@ -201,7 +201,7 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
     var width = this.size.width;
 
     for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
-        var index = ~~(k + k / width);
+        //var index = ~~(k + k / width);
 
         //var r = Math.floor(clamp(data[i + 0] + ditherStrength * ((index % 2) - 1), 0, 255) / this.denominator) * this.denominator;
         //var g = Math.floor(clamp(data[i + 1] + ditherStrength * (((index + 1) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
