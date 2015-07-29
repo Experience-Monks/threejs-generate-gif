@@ -203,9 +203,13 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
     for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
         var index = ~~(k + k / width);
 
-        var r = Math.floor(clamp(data[i + 0] + ditherStrength * ((index % 2) - 1), 0, 255) / this.denominator) * this.denominator;
-        var g = Math.floor(clamp(data[i + 1] + ditherStrength * (((index + 1) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
-        var b = Math.floor(clamp(data[i + 2] + ditherStrength * (((index + 2) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
+        //var r = Math.floor(clamp(data[i + 0] + ditherStrength * ((index % 2) - 1), 0, 255) / this.denominator) * this.denominator;
+        //var g = Math.floor(clamp(data[i + 1] + ditherStrength * (((index + 1) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
+        //var b = Math.floor(clamp(data[i + 2] + ditherStrength * (((index + 2) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
+
+        var r = Math.floor(data[i + 0] / this.denominator) * this.denominator;
+        var g = Math.floor(data[i + 1] / this.denominator) * this.denominator;
+        var b = Math.floor(data[i + 2] / this.denominator) * this.denominator;
 
         this.pixels[k] = this.globalPaletteMap[this.rgb2index(r, g, b)];
     }
