@@ -1,31 +1,63 @@
 var OMGGIF = require('omggif');
 var clamp = require('clamp');
+var clusterfck = require("clusterfck");
 
+var defaults = require('lodash.defaults');
+
+var paletteMethods = {
+    KMEANS: 0,
+    VOTES: 1
+};
 function GIFGenerator(renderer, opts, callback) {
     
     opts = opts || {};
-    this.recalculatePalettePerFrame = opts.recalculatePalettePerFrame;
-    this.dither = opts.dither;
-    this.superSample = opts.superSample;
 
+    defaults(opts, { 
+        recalculatePalettePerFrame: false,
+        dither: true,
+        ditherStrength: 8,
+        superSample: true,
+        denominator: 8,
+        frames: 100,
+        delay: 5,
+        size: {width: 300, height: 200},
+        paletteMethod: paletteMethods.KMEANS
+    });
+
+    defaults(this, opts);
+   
     this.renderer = renderer;
     this.generating = false;
-    //this.current = 0;
-    this.frames = opts.frame || 100;
-    this.delay = opts.delay || 5;
 
-    this.renderTarget = opts.renderTarget;
+    this.renderSize = this.superSample ? {width: this.size.width * 2, height: this.size.height * 2} : this.size;
 
-    this.size = opts.size || {width: 500, height: 500};
-    this.doubleSize = this.superSample ? {width: this.size.width * 2, height: this.size.height * 2} : this.size;
+    var renderTarget = new THREE.WebGLRenderTarget(this.renderSize.width, this.renderSize.height);
+    renderTarget.flipY = true;
+    renderTarget.generateMipMaps = false;
+    renderTarget.minFilter = THREE.LinearFilter;
+    renderTarget.magFilter = THREE.LinearFilter;
+
+    this.renderTarget = renderTarget;
 
     this.callback = callback;
 
-    this.denominator = 16;
     this.quantizedLevels = 256 / this.denominator;
+
+    switch(this.paletteMethod) {
+        case paletteMethods.KMEANS:
+            this.buildPalette = this.buildPaletteKMeans;        
+            break;
+        case paletteMethods.VOTES:
+            this.buildPalette = this.buildPaletteVotes;
+            break;
+        default:
+            throw new Error('Unknown Palette method.');
+    }
 }
 
-GIFGenerator.prototype.buildPalette = function(data) {
+GIFGenerator.paletteMethods = paletteMethods;
+
+GIFGenerator.prototype.buildPaletteVotes = function(data) {
 
     var skip = Math.ceil((data.length / 4) / 10000);
     var step = 4 * skip;
@@ -57,30 +89,72 @@ GIFGenerator.prototype.buildPalette = function(data) {
 
     var palette = superPalette.slice(0, 256);
 
-    this.globalPaletteMap = new Uint8Array(Math.pow(this.quantizedLevels, 3));
+    return palette;
+};
+
+GIFGenerator.prototype.buildGlobalPaletteMap = function(palette) {   
+
+    function findClosestIndex(r, g, b) {
+        var distance = Infinity;
+        var closestIndex = -1;
+
+        var tempDistance;
+        for (var i = 0; i < palette.length; i++) {
+            tempDistance = Math.abs(r - palette[i][2]) + Math.abs(g - palette[i][3]) + Math.abs(b - palette[i][4]);
+            if (tempDistance < distance) {
+                distance = tempDistance;
+                closestIndex = i;
+            }
+        }
+        return closestIndex;
+    }
+
+    var globalPaletteMap = new Uint8Array(Math.pow(this.quantizedLevels, 3));
 
     var cursor = 0; 
     for (var ir = 0; ir < 256; ir += this.denominator) {
         for (var ig = 0; ig < 256; ig += this.denominator) {
             for (var ib = 0; ib < 256; ib += this.denominator) {
                 
-                this.globalPaletteMap[cursor] = this.findClosestIndex(ir, ig, ib, palette);
+                globalPaletteMap[cursor] = findClosestIndex(ir, ig, ib);
                 cursor++;                
             }
         }
     }
-    this.palette = palette;
+    return globalPaletteMap;
+};
+
+GIFGenerator.prototype.buildPaletteKMeans = function(data) {
+    
+    var skip = Math.ceil((data.length / 4) / 10000);
+    var step = 4 * skip;
+
+    var superPalette = [];
+
+    for (var j = 0, jl = data.length; j < jl; j += step) {
+        
+        var r = Math.floor(data[j + 0] / this.denominator) * this.denominator;
+        var g = Math.floor(data[j + 1] / this.denominator) * this.denominator;
+        var b = Math.floor(data[j + 2] / this.denominator) * this.denominator;
+        
+        superPalette.push([r, g, b]);
+    }
+
+    var kmeans = new clusterfck.Kmeans();
+    kmeans.cluster(superPalette, 256);
+
+    return kmeans.centroids.map(function(rgb) { 
+
+        rgb = [~~rgb[0], ~~rgb[1], ~~rgb[2]];
+        
+        var color = rgb[0] << 16 | rgb[1] << 8 | rgb[2];
+        return [color, 1, rgb[0], rgb[1], rgb[2]];
+    });
 };
 
 GIFGenerator.prototype.init = function() {
 
     this.generating = true;
-
-    var canvas = document.createElement('canvas');
-    canvas.width = this.size.width; //this.renderer.domElement.width;
-    canvas.height = this.size.height; //this.renderer.domElement.height;
-
-    var context2d = canvas.getContext('2d');
 
     var buffer = new Uint8Array(this.size.width * this.size.height * this.frames * 5);
     var gif = new OMGGIF.GifWriter(buffer, this.size.width, this.size.height, {
@@ -89,22 +163,14 @@ GIFGenerator.prototype.init = function() {
 
     var pixels = new Uint8Array(this.size.width * this.size.height);
 
-    if (this.renderTarget)
-    {
-        var context3d = this.renderer.getContext();
-        var imageDataArraySource = new Uint8Array(this.doubleSize.width * this.doubleSize.height * 4);
-        var imageDataArrayDest = new Uint8Array(this.size.width * this.size.height * 4);
+    var context3d = this.renderer.getContext();
+    var imageDataArraySource = new Uint8Array(this.renderSize.width * this.renderSize.height * 4);
+    var imageDataArrayDest = new Uint8Array(this.size.width * this.size.height * 4);
 
-        var imageData = context2d.createImageData(this.size.width, this.size.height);
+    this.context3d = context3d;
+    this.imageDataArraySource = imageDataArraySource;
+    this.imageDataArrayDest = imageDataArrayDest;
 
-        this.context3d = context3d;
-        this.imageDataArraySource = imageDataArraySource;
-        this.imageDataArrayDest = imageDataArrayDest;
-        this.imageData = imageData;
-    }
-
-    this.canvas = canvas;
-    this.context2d = context2d;
     this.buffer = buffer;
     this.pixels = pixels;
 
@@ -123,22 +189,6 @@ GIFGenerator.prototype.finish = function() {
 
         this.generating = false;
 };
-
-GIFGenerator.prototype.findClosestIndex = function(r, g, b, palette) {
-    var distance = Infinity;
-    var closestIndex = -1;
-
-    var tempDistance;
-    for (var i = 0; i < palette.length; i++) {
-        tempDistance = Math.abs(r - palette[i][2]) + Math.abs(g - palette[i][3]) + Math.abs(b - palette[i][4]);
-        if (tempDistance < distance) {
-            distance = tempDistance;
-            closestIndex = i;
-        }
-    }
-    return closestIndex;
-};
-
 
 GIFGenerator.prototype.rgb2index = function(r, g, b) {
     r = Math.floor(r / this.denominator);
@@ -163,54 +213,47 @@ GIFGenerator.prototype.getSrcIndex = function(destIndex, offsetX, offsetY) {
 
 GIFGenerator.prototype.addFrame = function(recalculatePalette) {
 
-    if (this.renderTarget) {
+    this.renderer.setRenderTarget(this.renderTarget);
+    this.context3d.readPixels(0, 0, this.renderSize.width, this.renderSize.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
-        this.renderer.setRenderTarget(this.renderTarget);
-        this.context3d.readPixels(0, 0, this.doubleSize.width, this.doubleSize.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
+    var data;
 
-        if (this.superSample) {
-            this.srcWidth = this.doubleSize.width;
-            this.destWidth = this.size.width;           
+    if (this.superSample) {
+        this.srcWidth = this.renderSize.width;
+        this.destWidth = this.size.width;           
 
-            for (var i = 0, l = this.imageDataArrayDest.length; i < l; i++) {
-                this.imageDataArrayDest[i] = ~~((this.imageDataArraySource[this.getSrcIndex(i, 0, 0)] +
-                this.imageDataArraySource[this.getSrcIndex(i, 1, 0)] +
-                this.imageDataArraySource[this.getSrcIndex(i, 0, 1)] +
-                this.imageDataArraySource[this.getSrcIndex(i, 1, 1)]) / 4);
-            }
-
-            this.imageData.data.set(this.imageDataArrayDest);
-        } else {
-            this.imageData.data.set(this.imageDataArraySource);
+        for (var i = 0, l = this.imageDataArrayDest.length; i < l; i++) {
+            this.imageDataArrayDest[i] = ~~((this.imageDataArraySource[this.getSrcIndex(i, 0, 0)] +
+            this.imageDataArraySource[this.getSrcIndex(i, 1, 0)] +
+            this.imageDataArraySource[this.getSrcIndex(i, 0, 1)] +
+            this.imageDataArraySource[this.getSrcIndex(i, 1, 1)]) / 4);
         }
-        
-        this.context2d.putImageData(this.imageData, 0, 0);
-
+        data = this.imageDataArrayDest;
     } else {
-
-        this.context2d.drawImage(this.renderer.domElement, 0, 0);
-    }  
-
-    var data = this.context2d.getImageData(0, 0, this.size.width, this.size.height).data;
+        data = this.imageDataArraySource;
+    }
 
     if (!this.globalPaletteMap || this.recalculatePalettePerFrame || recalculatePalette) {
-        this.buildPalette(data);
+        this.palette = this.buildPalette(data);
+        this.globalPaletteMap = this.buildGlobalPaletteMap(this.palette);
     } 
 
-    var ditherStrength = this.dither ? 8 : 0;
     var width = this.size.width;
 
     for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
-        //var index = ~~(k + k / width);
+        var index = ~~(k + k / width);
 
-        //var r = Math.floor(clamp(data[i + 0] + ditherStrength * ((index % 2) - 1), 0, 255) / this.denominator) * this.denominator;
-        //var g = Math.floor(clamp(data[i + 1] + ditherStrength * (((index + 1) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
-        //var b = Math.floor(clamp(data[i + 2] + ditherStrength * (((index + 2) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
+        var r, g, b;
 
-        var r = Math.floor(data[i + 0] / this.denominator) * this.denominator;
-        var g = Math.floor(data[i + 1] / this.denominator) * this.denominator;
-        var b = Math.floor(data[i + 2] / this.denominator) * this.denominator;
-
+        if (this.dither) {
+            r = Math.floor(clamp(data[i + 0] + this.ditherStrength * ((index % 2) - 1), 0, 255) / this.denominator) * this.denominator;
+            g = Math.floor(clamp(data[i + 1] + this.ditherStrength * (((index + 1) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
+            b = Math.floor(clamp(data[i + 2] + this.ditherStrength * (((index + 2) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
+        } else {
+            r = Math.floor(data[i + 0] / this.denominator) * this.denominator;
+            g = Math.floor(data[i + 1] / this.denominator) * this.denominator;
+            b = Math.floor(data[i + 2] / this.denominator) * this.denominator;
+        }
         this.pixels[k] = this.globalPaletteMap[this.rgb2index(r, g, b)];
     }
 

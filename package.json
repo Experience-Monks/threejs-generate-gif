@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "clamp": "^1.0.1",
+    "clusterfck": "^0.6.0",
+    "lodash": "^3.10.0",
     "omggif": "^1.0.8"
   },
   "devDependencies": {
