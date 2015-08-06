@@ -41,6 +41,7 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap) {
 		fragmentShader: 
 		[
 		'uniform sampler2D texture1;',
+		'uniform sampler2D tonemap;',
 		'uniform vec2 pixelSize; ',
 		'uniform float time;',
 		'uniform float noise;',
@@ -59,13 +60,11 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap) {
 		'       return mod289(((x*34.0)+1.0)*x);',
 		'  }',
 		
-		'  vec4 taylorInvSqrt(vec4 r)',
-		'  {',
+		'  vec4 taylorInvSqrt(vec4 r) {',
 		'    return 1.79284291400159 - 0.85373472095314 * r;',
 		'  }',
 		
-		'  float snoise(vec3 v)',
-		'    { ',
+		'  float snoise(vec3 v) {',
 		'    const vec2  C = vec2(0.16666666666667, 0.33333333333333) ;',
 		'    const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);',
 		
@@ -125,17 +124,42 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap) {
 		'    return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), ',
 		'                                  dot(p2,x2), dot(p3,x3) ) );',
 		'  }',
-		'void main() {',
 
-		'	gl_FragColor = texture2D(texture1, vUv); ',
-		'	gl_FragColor += texture2D(texture1, vUv + vec2(pixelSize.x, 0.0) ); ', 
-		'	gl_FragColor += texture2D(texture1, vUv + vec2(0.0, pixelSize.y) ); ', 
-		'	gl_FragColor += texture2D(texture1, vUv + vec2(pixelSize.x, pixelSize.y) ); ',
-		'	gl_FragColor *= 0.25; ', 
-		'	gl_FragColor += snoise(vec3(vUv.xy / pixelSize.xy * noise, time)) * 0.025; ',
-		//'	gl_FragColor += (mod(vUv.x, pixelSize.x * 4.0) - mod(vUv.y, pixelSize.y * 4.0)) * 3.0 ; ' + 
+		"#define LUT_FLIP_Y",
 
-		'}'
+            "vec4 lookup(in vec4 textureColor, in sampler2D lookupTable1) {",
+                "textureColor = clamp(textureColor, 0.0, 1.0);",
+            
+                "float blueColor = textureColor.b * 63.0;",
+            
+                "vec2 quad1;",
+                "quad1.y = floor(floor(blueColor) / 8.0);",
+                "quad1.x = floor(blueColor) - (quad1.y * 8.0);",
+                        
+                "vec2 texPos1;",
+                "texPos1.x = (quad1.x * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.r);",
+                "texPos1.y = (quad1.y * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.g);",
+            
+                "#ifdef LUT_FLIP_Y",
+                "    texPos1.y = 1.0-texPos1.y;",
+                "#endif",
+                            
+                "lowp vec4 newColor1 = texture2D(lookupTable1, texPos1);",
+                 "return newColor1;",
+            "}\n",
+
+		'  void main() {',
+
+		'    vec4 color;',
+		'    color = texture2D(texture1, vUv); ',
+		'    color += texture2D(texture1, vUv + vec2(pixelSize.x, 0.0) ); ', 
+		'    color += texture2D(texture1, vUv + vec2(0.0, pixelSize.y) ); ', 
+		'    color += texture2D(texture1, vUv + vec2(pixelSize.x, pixelSize.y) ); ',
+		'    color *= 0.25; ', 
+		'    color += snoise(vec3(vUv.xy / pixelSize.xy * noise, time)) * 0.025; ',
+
+		'    gl_FragColor = lookup(color, tonemap);',
+		'  }'
 		].join('\n')
 	});
 

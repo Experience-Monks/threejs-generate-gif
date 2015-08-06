@@ -21,9 +21,9 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
         ditherStrength: 8,
         superSample: true,
         denominator: 8,
-        frames: 100,
+        frames: 50,
         delay: 5,
-        size: {width: 300, height: 200},
+        size: {width: 300, height: 300},
         paletteMethod: paletteMethods.KMEANS
     });
 
@@ -48,7 +48,7 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
 
     this.tonemap = THREE.ImageUtils.loadTexture( "assets/tonemaps/original.png", THREE.UVMapping, 
     function() {
-        _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size);
+        _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size, _this.tonemap);
         
         initCallback();
     });
@@ -170,20 +170,28 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
     var tonemapPixels = this.getImageData(this.tonemap.image);
 
     cursor = 0;
-    for (var i = 0, l = tonemapPixels.data.length; i < l; i += 4) {
-        var data = tonemapPixels.data;
-
+    var data = tonemapPixels.data;
+    for (var i = 0, l = data.length; i < l; i += 4) {
+        
         var r = data[i];
         var g = data[i + 1];
         var b = data[i + 2];
 
-        data[i] = findClosestIndex(r, g, b);
-        data[i + 1] = findClosestIndex(r, g, b);
-        data[i + 2] = findClosestIndex(r, g, b);
+        var index = findClosestIndex(r, g, b);
+        data[i] = index;
+        data[i + 1] = index;
+        data[i + 2] = index;
     }
 
     var newTonemap = new THREE.DataTexture(new Uint8Array(tonemapPixels.data), tonemapPixels.width, tonemapPixels.height, THREE.RGBAFormat );
+
+    newTonemap.minFilter = THREE.NearestFilter;
+    newTonemap.magFilter = THREE.NearestFilter;
+    newTonemap.generateMipMaps = false;
+    newTonemap.flipY = true;
+
     newTonemap.needsUpdate = true;
+    this.renderer.setTexture(newTonemap, 0);
         
     this.postProcessor.setTonemap(newTonemap);
 
@@ -306,14 +314,15 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
     if (!this.globalPaletteToneMap || this.recalculatePalettePerFrame || recalculatePalette) {
         this.palette = this.buildPalette(data);
         this.globalPaletteToneMap = this.buildGlobalPaletteToneMap(this.palette);
+        return;
     } 
 
     var width = this.size.width;
 
     for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
-        var index = ~~(k + k / width);
+        //var index = ~~(k + k / width);
 
-        var r, g, b;
+        /*var r, g, b;
 
         if (this.dither) {
             r = Math.floor(clamp(data[i + 0] + this.ditherStrength * ((index % 2) - 1), 0, 255) / this.denominator) * this.denominator;
@@ -323,8 +332,8 @@ GIFGenerator.prototype.addFrame = function(recalculatePalette) {
             r = Math.floor(data[i + 0] / this.denominator) * this.denominator;
             g = Math.floor(data[i + 1] / this.denominator) * this.denominator;
             b = Math.floor(data[i + 2] / this.denominator) * this.denominator;
-        }
-        this.pixels[k] = this.globalPaletteToneMap[this.rgb2index(r, g, b)];
+        }*/
+        this.pixels[k] = data[i];//this.globalPaletteToneMap[this.rgb2index(r, g, b)];
     }
 
     var powof2 = 1;
