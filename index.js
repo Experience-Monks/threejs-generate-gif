@@ -1,5 +1,4 @@
 var OMGGIF = require('omggif');
-var clamp = require('clamp');
 var clusterfck = require("clusterfck");
 
 var defaults = require('lodash.defaults');
@@ -15,26 +14,21 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
     opts = opts || {};
 
     defaults(opts, { 
-        useGPU: true,
-        recalculatePalettePerFrame: false,
-        dither: true,
-        ditherStrength: 8,
-        superSample: true,
-        denominator: 8,
         frames: 50,
-        delay: 5,
         size: {width: 300, height: 300},
-        paletteMethod: paletteMethods.KMEANS
+        paletteMethod: paletteMethods.KMEANS,
+        superSample: true,
+        dither: true,
+        denominator: 8,
+        delay: 5
     });
 
     defaults(this, opts);
    
     this.renderer = renderer;
-    this.generating = false;
 
-    this.renderSize = this.superSample ? {width: this.size.width * 2, height: this.size.height * 2} : this.size;
-
-    this.arraySize = (this.superSample && !this.useGPU) ? this.renderSize : this.size;
+    this.globalPaletteToneMapBuilt = false;
+    this.renderSize = { width: this.size.width * 2, height: this.size.height * 2 };
 
     var renderTarget = new THREE.WebGLRenderTarget(this.renderSize.width, this.renderSize.height);
     renderTarget.flipY = true;
@@ -48,14 +42,12 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
 
     this.tonemap = THREE.ImageUtils.loadTexture( "assets/tonemaps/original.png", THREE.UVMapping, 
     function() {
-        _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size, _this.tonemap);
+        _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size, _this.tonemap, opts);
         
         initCallback();
     });
 
     this.onCompleteCallback = onCompleteCallback;
-
-    this.quantizedLevels = 256 / this.denominator;
 
     switch(this.paletteMethod) {
         case paletteMethods.KMEANS:
@@ -68,8 +60,6 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
             throw new Error('Unknown Palette method.');
     }
 
-    this.generating = true;
-
     var buffer = new Uint8Array(this.size.width * this.size.height * this.frames * 5);
     var gif = new OMGGIF.GifWriter(buffer, this.size.width, this.size.height, {
         loop: 0
@@ -78,12 +68,10 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
     var pixels = new Uint8Array(this.size.width * this.size.height);
 
     var context3d = this.renderer.getContext();
-    var imageDataArraySource = new Uint8Array(this.arraySize.width * this.arraySize.height * 4);
-    var imageDataArrayDest = new Uint8Array(this.size.width * this.size.height * 4);
+    var imageDataArraySource = new Uint8Array(this.size.width * this.size.height * 4);
 
     this.context3d = context3d;
     this.imageDataArraySource = imageDataArraySource;
-    this.imageDataArrayDest = imageDataArrayDest;
 
     this.buffer = buffer;
     this.pixels = pixels;
@@ -155,18 +143,6 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
         return closestIndex;
     }
 
-    var globalPaletteToneMap = new Uint8Array(Math.pow(this.quantizedLevels, 3));
-
-    var cursor = 0; 
-    for (var ir = 0; ir < 256; ir += this.denominator) {
-        for (var ig = 0; ig < 256; ig += this.denominator) {
-            for (var ib = 0; ib < 256; ib += this.denominator) {
-                
-                globalPaletteToneMap[cursor++] = findClosestIndex(ir, ig, ib);
-            }
-        }
-    }
-
     var tonemapPixels = this.getImageData(this.tonemap.image);
 
     cursor = 0;
@@ -178,9 +154,7 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
         var b = data[i + 2];
 
         var index = findClosestIndex(r, g, b);
-        data[i] = index;
-        data[i + 1] = index;
-        data[i + 2] = index;
+        data[i] = data[i + 1] = data[i + 2] = index;
     }
 
     var newTonemap = new THREE.DataTexture(new Uint8Array(tonemapPixels.data), tonemapPixels.width, tonemapPixels.height, THREE.RGBAFormat );
@@ -195,7 +169,7 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
         
     this.postProcessor.setTonemap(newTonemap);
 
-    return globalPaletteToneMap;
+    this.globalPaletteToneMapBuilt = true;
 };
 
 GIFGenerator.prototype.buildPaletteKMeans = function(data) {
@@ -260,80 +234,25 @@ GIFGenerator.prototype.finish = function() {
             string += String.fromCharCode(this.buffer[i]);
         }
         this.onCompleteCallback('data:image/gif;base64,' + btoa(string));
-
-        this.generating = false;
 };
 
-GIFGenerator.prototype.rgb2index = function(r, g, b) {
-    r = Math.floor(r / this.denominator);
-    g = Math.floor(g / this.denominator);
-    b = Math.floor(b / this.denominator);
+GIFGenerator.prototype.addFrame = function() {
 
-    return r * this.quantizedLevels * this.quantizedLevels + g * this.quantizedLevels + b;
-};
+    this.postProcessor.update();    
 
-GIFGenerator.prototype.getSrcIndex = function(destIndex, offsetX, offsetY) {
-    var destPixelIndex = ~~(destIndex / 4);
-    var destX = destPixelIndex % this.destWidth;
-    var destY = ~~(destPixelIndex / this.destWidth);
+    this.renderer.setRenderTarget(this.postProcessor.renderTarget);
+    this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
-    var srcX = destX * 2 + offsetX;
-    var srcY = destY * 2 + offsetY;
-    var srcPixelIndex = srcY * this.srcWidth + srcX;
+    var data = this.imageDataArraySource;
 
-    var srcIndex = srcPixelIndex * 4 + (destIndex % 4);
-    return srcIndex;
-};
-
-GIFGenerator.prototype.addFrame = function(recalculatePalette) {
-
-    if (this.useGPU) {
-        this.postProcessor.update();    
-    }    
-
-    this.renderer.setRenderTarget(this.useGPU ? this.postProcessor.renderTarget : this.renderTarget);
-    this.context3d.readPixels(0, 0, this.arraySize.width, this.arraySize.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
-
-    var data;
-
-    if (this.superSample && !this.useGPU) {
-        this.srcWidth = this.renderSize.width;
-        this.destWidth = this.size.width;           
-
-        for (var i = 0, l = this.imageDataArrayDest.length; i < l; i++) {
-            this.imageDataArrayDest[i] = ~~((this.imageDataArraySource[this.getSrcIndex(i, 0, 0)] +
-            this.imageDataArraySource[this.getSrcIndex(i, 1, 0)] +
-            this.imageDataArraySource[this.getSrcIndex(i, 0, 1)] +
-            this.imageDataArraySource[this.getSrcIndex(i, 1, 1)]) / 4);
-        }
-        data = this.imageDataArrayDest;
-    } else {
-        data = this.imageDataArraySource;
-    }
-
-    if (!this.globalPaletteToneMap || this.recalculatePalettePerFrame || recalculatePalette) {
+    if (!this.globalPaletteToneMapBuilt) {
         this.palette = this.buildPalette(data);
-        this.globalPaletteToneMap = this.buildGlobalPaletteToneMap(this.palette);
+        this.buildGlobalPaletteToneMap(this.palette);
         return;
     } 
 
-    var width = this.size.width;
-
     for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
-        //var index = ~~(k + k / width);
-
-        /*var r, g, b;
-
-        if (this.dither) {
-            r = Math.floor(clamp(data[i + 0] + this.ditherStrength * ((index % 2) - 1), 0, 255) / this.denominator) * this.denominator;
-            g = Math.floor(clamp(data[i + 1] + this.ditherStrength * (((index + 1) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
-            b = Math.floor(clamp(data[i + 2] + this.ditherStrength * (((index + 2) % 2) - 1), 0, 255) / this.denominator) * this.denominator;
-        } else {
-            r = Math.floor(data[i + 0] / this.denominator) * this.denominator;
-            g = Math.floor(data[i + 1] / this.denominator) * this.denominator;
-            b = Math.floor(data[i + 2] / this.denominator) * this.denominator;
-        }*/
-        this.pixels[k] = data[i];//this.globalPaletteToneMap[this.rgb2index(r, g, b)];
+        this.pixels[k] = data[i];
     }
 
     var powof2 = 1;

@@ -1,4 +1,8 @@
-function PostProcessor(renderer, oldRenderTarget, size, tonemap) {
+function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
+   
+    opts = opts || {};
+	this.superSample = opts.superSample;    
+	this.dither = opts.dither;    
 
     this.renderer = renderer;
     this.oldRenderTarget = oldRenderTarget;
@@ -26,7 +30,7 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap) {
 		uniforms: {
 			pixelSize: { type: 'v2', value: new THREE.Vector2(1.0 / oldRenderTarget.width, 1.0 / oldRenderTarget.height) },
 			time: {type: 'f', value: 0.0},
-			noise: {type: 'f', value: 0.0},
+			noise: {type: 'f', value: 0.38},
 			texture1: {type: 't', value: oldRenderTarget}, 
 			tonemap: {type: 't', value: tonemap} 
 		},
@@ -125,38 +129,46 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap) {
 		'                                  dot(p2,x2), dot(p3,x3) ) );',
 		'  }',
 
-		"#define LUT_FLIP_Y",
+		'#define LUT_FLIP_Y',
 
-            "vec4 lookup(in vec4 textureColor, in sampler2D lookupTable1) {",
-                "textureColor = clamp(textureColor, 0.0, 1.0);",
-            
-                "float blueColor = textureColor.b * 63.0;",
-            
-                "vec2 quad1;",
-                "quad1.y = floor(floor(blueColor) / 8.0);",
-                "quad1.x = floor(blueColor) - (quad1.y * 8.0);",
-                        
-                "vec2 texPos1;",
-                "texPos1.x = (quad1.x * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.r);",
-                "texPos1.y = (quad1.y * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.g);",
-            
-                "#ifdef LUT_FLIP_Y",
-                "    texPos1.y = 1.0-texPos1.y;",
-                "#endif",
-                            
-                "lowp vec4 newColor1 = texture2D(lookupTable1, texPos1);",
-                 "return newColor1;",
-            "}\n",
+		'vec4 lookup(in vec4 textureColor, in sampler2D lookupTable1) {',
+        '	textureColor = clamp(textureColor, 0.0, 1.0);',  
+      
+        '	float blueColor = floor(textureColor.b * 64.0);',
+    
+        '	vec2 quad1;',
+        '	quad1.y = floor(blueColor / 8.0) / 8.0;',
+        '	quad1.x = mod(blueColor, 8.0) / 8.0;',
+                
+        '	vec2 texPos1;',
+        '	texPos1.x = quad1.x + textureColor.r * (1.0 / 8.0 - 1.0 / 512.0) ;',
+        '	texPos1.y = quad1.y + textureColor.g * (1.0 / 8.0 - 1.0 / 512.0) ;',
+    
+        '	#ifdef LUT_FLIP_Y',
+        '		texPos1.y = 1.0-texPos1.y;',
+        '	#endif',
+                    
+        '	lowp vec4 newColor1 = texture2D(lookupTable1, texPos1);',
+        '	return newColor1;',
+        '}',
 
 		'  void main() {',
 
 		'    vec4 color;',
 		'    color = texture2D(texture1, vUv); ',
+
+		this.superSample ? 
+		[
 		'    color += texture2D(texture1, vUv + vec2(pixelSize.x, 0.0) ); ', 
 		'    color += texture2D(texture1, vUv + vec2(0.0, pixelSize.y) ); ', 
 		'    color += texture2D(texture1, vUv + vec2(pixelSize.x, pixelSize.y) ); ',
-		'    color *= 0.25; ', 
-		'    color += snoise(vec3(vUv.xy / pixelSize.xy * noise, time)) * 0.025; ',
+		'    color *= 0.25; '
+		].join('\n') : '',
+
+		this.dither ? 
+		[
+		'    color += snoise(vec3(vUv.xy / pixelSize.xy * noise, time)) * 0.025; '
+		].join('\n') : '',
 
 		'    gl_FragColor = lookup(color, tonemap);',
 		'  }'
@@ -176,8 +188,7 @@ PostProcessor.prototype.setTonemap = function(tonemap) {
 
 PostProcessor.prototype.update = function() {
 
-	//this.material.uniforms.time.value += 0.025;
-	this.material.uniforms.noise.value += 0.38;
+	this.material.uniforms.time.value += 0.025;
 	this.renderer.render(this.scene, this.camera, this.renderTarget);
 };
 
