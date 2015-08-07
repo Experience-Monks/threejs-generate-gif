@@ -42,7 +42,7 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
 
     this.tonemap = THREE.ImageUtils.loadTexture( "assets/tonemaps/original.png", THREE.UVMapping, 
     function() {
-        _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size, _this.tonemap, opts);
+        _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size, undefined, opts);
         
         initCallback();
     });
@@ -51,10 +51,10 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
 
     switch(this.paletteMethod) {
         case paletteMethods.KMEANS:
-            this.buildPalette = this.buildPaletteKMeans;        
+            this.buildPaletteInternal = this.buildPaletteKMeans;        
             break;
         case paletteMethods.VOTES:
-            this.buildPalette = this.buildPaletteVotes;
+            this.buildPaletteInternal = this.buildPaletteVotes;
             break;
         default:
             throw new Error('Unknown Palette method.');
@@ -124,6 +124,20 @@ GIFGenerator.prototype.buildPaletteVotes = function(data) {
     var palette = superPalette.slice(0, 256);
 
     return palette;
+};
+
+GIFGenerator.prototype.buildPalette = function(data) {
+
+    if (!data) {
+        this.postProcessor.update();    
+
+        this.renderer.setRenderTarget(this.postProcessor.renderTarget);
+        this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
+
+        data = this.imageDataArraySource;
+    }    
+    this.palette = this.buildPaletteInternal(data);
+    this.buildGlobalPaletteToneMap(this.palette);
 };
 
 GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {   
@@ -244,12 +258,6 @@ GIFGenerator.prototype.addFrame = function() {
     this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
     var data = this.imageDataArraySource;
-
-    if (!this.globalPaletteToneMapBuilt) {
-        this.palette = this.buildPalette(data);
-        this.buildGlobalPaletteToneMap(this.palette);
-        return;
-    } 
 
     for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
         this.pixels[k] = data[i];
