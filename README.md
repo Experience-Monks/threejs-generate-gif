@@ -2,7 +2,7 @@
 
 [![experimental](http://badges.github.io/stability-badges/dist/experimental.svg)](http://github.com/badges/stability-badges)
 
-Generate an animated GIF from a threejs scene
+Generate an animated GIF (using the GPU) from a threejs scene
 
 ## Usage
 
