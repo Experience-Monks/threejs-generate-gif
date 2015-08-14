@@ -225,7 +225,9 @@ GIFGenerator.prototype.finish = function() {
         this.onCompleteCallback('data:image/gif;base64,' + btoa(string));
 };
 
-GIFGenerator.prototype.addFrame = function() {
+GIFGenerator.prototype.addFrame = function(delay) {
+
+    delay = delay || this.delay;
 
     this.postProcessor.update();    
 
@@ -248,7 +250,7 @@ GIFGenerator.prototype.addFrame = function() {
         palette: new Uint32Array(this.palette.map(function(element) { 
             return element ? element[0] : 0;
         })),
-        delay: this.delay
+        delay: delay
     });
 };
 
