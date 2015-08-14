@@ -1,6 +1,6 @@
 var OMGGIF = require('omggif');
-var clusterfck = require("clusterfck");
 
+var KMeans = require('cluster-kmeans');
 var defaults = require('lodash.defaults');
 
 var PostProcessor = require('./PostProcessor');
@@ -202,33 +202,8 @@ GIFGenerator.prototype.buildPaletteKMeans = function(data) {
         superPalette.push([r, g, b]);
     }
 
-    var distances = {
-      euclidean: function(v1, v2) {
-          var total = 0;
-          for (var i = 0; i < v1.length; i++) {
-             total += Math.pow(v2[i] - v1[i], 2);      
-          }
-          return Math.sqrt(total);
-       },
-       manhattan: function(v1, v2) {
-         var total = 0;
-         for (var i = 0; i < v1.length; i++) {
-            total += Math.abs(v2[i] - v1[i]);      
-         }
-         return total;
-       },
-       max: function(v1, v2) {
-         var max = 0;
-         for (var i = 0; i < v1.length; i++) {
-            max = Math.max(max, Math.abs(v2[i] - v1[i]));      
-         }
-         return max;
-       }
-    };
-    var distance = distances.euclidean;
-
-    var kmeans = new clusterfck.Kmeans();
-    kmeans.cluster(superPalette, 256, distance);
+    var kmeans = new KMeans();
+    kmeans.cluster(superPalette, 256);
 
     return kmeans.centroids.map(function(rgb) { 
 
