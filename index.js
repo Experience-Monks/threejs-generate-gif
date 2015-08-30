@@ -1,6 +1,7 @@
 var OMGGIF = require('omggif');
 
 var KMeans = require('cluster-kmeans');
+var createKDTree = require("static-kdtree");
 var defaults = require('lodash.defaults');
 
 var PostProcessor = require('./PostProcessor');
@@ -121,19 +122,26 @@ GIFGenerator.prototype.buildPaletteVotes = function(data) {
         var index = indexPalette.indexOf(color);
 
        if (index === -1) {
-            superPalette.push([color, 1, r, g, b]);
+            var arr = [r, g, b];
+            // arr.color = color;
+            arr.votes++;
+            superPalette.push(arr);
             indexPalette.push(color);
         }
         else {
-            superPalette[index][1]++;
+            superPalette[index].votes++;
         }
     }
 
     superPalette.sort(function(a, b) {
-        return b[1] - a[1];
+        return b.votes - a.votes;
     });
 
     var palette = superPalette.slice(0, 256);
+
+    palette.forEach(function(paletteColor) {
+        delete paletteColor.votes;
+    })
 
     return palette;
 };
@@ -148,7 +156,7 @@ GIFGenerator.prototype.buildPalette = function(data) {
 
         data = this.imageDataArraySource;
     }
-    __markTime('build pallete via clustering');
+    __markTime('build palette via clustering');
     this.palette = this.buildPaletteInternal(data);
     __markTime('build tonemap image');
     this.buildGlobalPaletteToneMap(this.palette);
@@ -157,33 +165,21 @@ GIFGenerator.prototype.buildPalette = function(data) {
 
 GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {   
 
-    function findClosestIndex(r, g, b) {
-        var distance = Infinity;
-        var closestIndex = -1;
-
-        var tempDistance;
-        for (var i = 0; i < palette.length; i++) {
-            tempDistance = Math.abs(r - palette[i][2]) + Math.abs(g - palette[i][3]) + Math.abs(b - palette[i][4]);
-            if (tempDistance < distance) {
-                distance = tempDistance;
-                closestIndex = i;
-            }
-        }
-        return closestIndex;
-    }
+    var tree = createKDTree(palette);
     __markTime('get tonemap default data.');
     var tonemapPixels = this.getImageData(this.tonemap.image);
     __markTime('start building tonemap');
 
     cursor = 0;
     var data = tonemapPixels.data;
+    var rgb = [];
     for (var i = 0, l = data.length; i < l; i += 4) {
         
-        var r = data[i];
-        var g = data[i + 1];
-        var b = data[i + 2];
+        rgb[0] = data[i];
+        rgb[1] = data[i + 1];
+        rgb[2] = data[i + 2];
 
-        var index = findClosestIndex(r, g, b);
+        var index = tree.nn(rgb);
         data[i] = data[i + 1] = data[i + 2] = index;
     }
     __markTime('use tonemap');
@@ -224,10 +220,14 @@ GIFGenerator.prototype.buildPaletteKMeans = function(data) {
 
     return kmeans.centroids.map(function(rgb) { 
 
-        rgb = [~~rgb[0], ~~rgb[1], ~~rgb[2]];
-        
-        var color = rgb[0] << 16 | rgb[1] << 8 | rgb[2];
-        return [color, 1, rgb[0], rgb[1], rgb[2]];
+        rgb[0] = ~~rgb[0];
+        rgb[1] = ~~rgb[1];
+        rgb[2] = ~~rgb[2];
+
+        // var color = rgb[0] << 16 | rgb[1] << 8 | rgb[2];
+        var arr = [rgb[0], rgb[1], rgb[2]];
+        // arr.color = color;
+        return arr;
     });
 };
 
@@ -264,8 +264,8 @@ GIFGenerator.prototype.addFrame = function(delay) {
     this.palette.length = powof2;
 
     this.gif.addFrame(0, 0, this.size.width, this.size.height, this.pixels, {
-        palette: new Uint32Array(this.palette.map(function(element) { 
-            return element ? element[0] : 0;
+        palette: new Uint32Array(this.palette.map(function(rgb) { 
+            return rgb[0] << 16 | rgb[1] << 8 | rgb[2];
         })),
         delay: delay
     });
