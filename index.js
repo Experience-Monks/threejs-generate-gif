@@ -9,6 +9,18 @@ var paletteMethods = {
     KMEANS: 0,
     VOTES: 1
 };
+
+var __debugLevel = 2;
+
+var lastTime;
+function __markTime(label) {
+    if(__debugLevel == 0) return;
+    var time = (new Date()).getTime() * 0.001;
+    if(lastTime !== undefined) console.log('DURATION: ' + (time - lastTime) + 's');
+    console.log('MARK: ' + label);
+    lastTime = time;
+}
+
 function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
     
     opts = opts || {};
@@ -135,9 +147,12 @@ GIFGenerator.prototype.buildPalette = function(data) {
         this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
         data = this.imageDataArraySource;
-    }    
+    }
+    __markTime('build pallete via clustering');
     this.palette = this.buildPaletteInternal(data);
+    __markTime('build tonemap image');
     this.buildGlobalPaletteToneMap(this.palette);
+    __markTime('tonemap image complete');
 };
 
 GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {   
@@ -156,8 +171,9 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
         }
         return closestIndex;
     }
-
+    __markTime('get tonemap default data.');
     var tonemapPixels = this.getImageData(this.tonemap.image);
+    __markTime('start building tonemap');
 
     cursor = 0;
     var data = tonemapPixels.data;
@@ -170,6 +186,7 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
         var index = findClosestIndex(r, g, b);
         data[i] = data[i + 1] = data[i + 2] = index;
     }
+    __markTime('use tonemap');
 
     var newTonemap = new THREE.DataTexture(new Uint8Array(tonemapPixels.data), tonemapPixels.width, tonemapPixels.height, THREE.RGBAFormat );
 
