@@ -13,6 +13,7 @@
     "clamp": "^1.0.1",
     "cluster-kmeans": "^1.0.2",
     "lodash": "^3.10.0",
+    "lodash.defaults": "^3.1.2",
     "omggif": "^1.0.8"
   },
   "devDependencies": {

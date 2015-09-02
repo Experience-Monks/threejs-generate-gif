@@ -1,4 +1,4 @@
-var THREE = require('three');
+THREE = require('three');
 var GIFGenerator = require('./index');
 
 var gifGenerator;
