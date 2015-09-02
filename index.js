@@ -32,7 +32,8 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
         superSample: true,
         dither: true,
         denominator: 8,
-        delay: 5
+        delay: 5,
+        lutImagePath: 'assets/tonemaps/original.png'
     });
 
     defaults(this, opts);
@@ -52,7 +53,7 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
 
     var _this = this;
 
-    this.tonemap = THREE.ImageUtils.loadTexture( "assets/tonemaps/original.png", THREE.UVMapping, 
+    this.tonemap = THREE.ImageUtils.loadTexture( this.lutImagePath, THREE.UVMapping, 
     function() {
         _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size, undefined, opts);
         
