@@ -73,7 +73,7 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
             throw new Error('Unknown Palette method.');
     }
 
-    var buffer = new Uint8Array(this.size.width * this.size.height * this.frames * 5);
+    var buffer = new Uint8Array(this.size.width * this.size.height * this.frames);
     var gif = new OMGGIF.GifWriter(buffer, this.size.width, this.size.height, {
         loop: 0
     });
@@ -112,11 +112,13 @@ GIFGenerator.prototype.buildPaletteVotes = function(data) {
     var superPalette = [];
     var indexPalette = [];
 
+    var denominator = this.denominator;
+
     for (var j = 0, jl = data.length; j < jl; j += step) {
         
-        var r = Math.floor(data[j + 0] / this.denominator) * this.denominator;
-        var g = Math.floor(data[j + 1] / this.denominator) * this.denominator;
-        var b = Math.floor(data[j + 2] / this.denominator) * this.denominator;
+        var r = Math.floor(data[j + 0] / denominator) * denominator;
+        var g = Math.floor(data[j + 1] / denominator) * denominator;
+        var b = Math.floor(data[j + 2] / denominator) * denominator;
         var color = r << 16 | g << 8 | b << 0;
 
         var index = indexPalette.indexOf(color);
@@ -154,6 +156,16 @@ GIFGenerator.prototype.buildPalette = function(data) {
     __markTime('build tonemap image');
     this.buildGlobalPaletteToneMap(this.palette);
     __markTime('tonemap image complete');
+
+    var powof2 = 1;
+    while (powof2 < this.palette.length) {
+        powof2 <<= 1;
+    }
+    this.palette.length = powof2;
+
+    this.palette32 = new Uint32Array(this.palette.map(function(element) { 
+        return element ? element[0] : 0;
+    }));
 };
 
 GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {   
@@ -211,11 +223,13 @@ GIFGenerator.prototype.buildPaletteKMeans = function(data) {
 
     var superPalette = [];
 
+    var denominator = this.denominator;
+
     for (var j = 0, jl = data.length; j < jl; j += step) {
         
-        var r = Math.floor(data[j + 0] / this.denominator) * this.denominator;
-        var g = Math.floor(data[j + 1] / this.denominator) * this.denominator;
-        var b = Math.floor(data[j + 2] / this.denominator) * this.denominator;
+        var r = Math.floor(data[j + 0] / denominator) * denominator;
+        var g = Math.floor(data[j + 1] / denominator) * denominator;
+        var b = Math.floor(data[j + 2] / denominator) * denominator;
         
         superPalette.push([r, g, b]);
     }
@@ -235,11 +249,33 @@ GIFGenerator.prototype.buildPaletteKMeans = function(data) {
 GIFGenerator.prototype.finish = function() {
 
         // return buffer.slice( 0, gif.end() );
-        var string = '';
+
+        var string;
+        var buffer = this.buffer;
 
         for (var i = 0, l = this.gif.end(); i < l; i++) {
-            string += String.fromCharCode(this.buffer[i]);
+            string += String.fromCharCode(buffer[i]);
         }
+      
+        this.postProcessor.renderTarget.dispose();
+        this.renderTarget.dispose();
+        this.tonemap.dispose();
+
+        delete this.postProcessor;
+        delete this.imageDataArraySource
+        delete this.buffer 
+        delete this.pixels 
+        delete this.palette
+        delete this.palette32
+     
+        //this.imageDataArraySource
+        //this.buffer 
+        //this.pixels 
+        //
+        //this.postProcessor
+        //this.palette
+        //this.palette32
+
         this.onCompleteCallback('data:image/gif;base64,' + btoa(string));
 };
 
@@ -258,16 +294,8 @@ GIFGenerator.prototype.addFrame = function(delay) {
         this.pixels[k] = data[i];
     }
 
-    var powof2 = 1;
-    while (powof2 < this.palette.length) {
-        powof2 <<= 1;
-    }
-    this.palette.length = powof2;
-
     this.gif.addFrame(0, 0, this.size.width, this.size.height, this.pixels, {
-        palette: new Uint32Array(this.palette.map(function(element) { 
-            return element ? element[0] : 0;
-        })),
+        palette: this.palette32,
         delay: delay
     });
 };
