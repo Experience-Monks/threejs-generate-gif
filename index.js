@@ -248,28 +248,27 @@ GIFGenerator.prototype.buildPaletteKMeans = function(data) {
 
 GIFGenerator.prototype.finish = function() {
 
-        // return buffer.slice( 0, gif.end() );
-
         var length = this.gif.end();
-        var string = new Array(length);
 
-        var buffer = this.buffer;
+        this.buffer = this.buffer.slice(0, length);
 
-        for (var i = 0; i < length; i++) {
-            string[i] = String.fromCharCode(buffer[i]);
+        var CHUNK_SZ = 0x20000;
+        var string = [];
+        for (var i=0; i < length; i+=CHUNK_SZ) {
+            string.push(String.fromCharCode.apply(null, this.buffer.subarray(i, i+CHUNK_SZ)));
         }
         string = string.join('');
-      
+
         this.postProcessor.renderTarget.dispose();
         this.renderTarget.dispose();
         this.tonemap.dispose();
 
         delete this.postProcessor;
-        delete this.imageDataArraySource
-        delete this.buffer 
-        delete this.pixels 
-        delete this.palette
-        delete this.palette32
+        delete this.imageDataArraySource;
+        delete this.pixels ;
+        delete this.palette;
+        delete this.palette32;
+        delete this.buffer;
      
         this.onCompleteCallback('data:image/gif;base64,' + btoa(string));
 };
