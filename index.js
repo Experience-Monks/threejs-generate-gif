@@ -250,12 +250,15 @@ GIFGenerator.prototype.finish = function() {
 
         // return buffer.slice( 0, gif.end() );
 
-        var string;
+        var length = this.gif.end();
+        var string = new Array(length);
+
         var buffer = this.buffer;
 
-        for (var i = 0, l = this.gif.end(); i < l; i++) {
-            string += String.fromCharCode(buffer[i]);
+        for (var i = 0; i < length; i++) {
+            string[i] = String.fromCharCode(buffer[i]);
         }
+        string = string.join('');
       
         this.postProcessor.renderTarget.dispose();
         this.renderTarget.dispose();
@@ -268,14 +271,6 @@ GIFGenerator.prototype.finish = function() {
         delete this.palette
         delete this.palette32
      
-        //this.imageDataArraySource
-        //this.buffer 
-        //this.pixels 
-        //
-        //this.postProcessor
-        //this.palette
-        //this.palette32
-
         this.onCompleteCallback('data:image/gif;base64,' + btoa(string));
 };
 
