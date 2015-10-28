@@ -250,9 +250,9 @@ GIFGenerator.prototype.finish = function() {
 
         var length = this.gif.end();
 
-        this.buffer = this.buffer.slice(0, length);
+        this.buffer = this.buffer.subarray(0, length);
 
-        var CHUNK_SZ = 0x20000;
+        var CHUNK_SZ = 0x10000;
         var string = [];
         for (var i=0; i < length; i+=CHUNK_SZ) {
             string.push(String.fromCharCode.apply(null, this.buffer.subarray(i, i+CHUNK_SZ)));
