@@ -4,10 +4,12 @@ var KMeans = require('cluster-kmeans');
 var defaults = require('lodash.defaults');
 
 var PostProcessor = require('./PostProcessor');
+var NeuQuant = require('./TypedNeuQuant');
 
 var paletteMethods = {
     KMEANS: 0,
-    VOTES: 1
+    VOTES: 1,
+    NEUQUANT: 2
 };
 
 var __debugLevel = 2;
@@ -69,6 +71,9 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
         case paletteMethods.VOTES:
             this.buildPaletteInternal = this.buildPaletteVotes;
             break;
+        case paletteMethods.NEUQUANT:
+            this.buildPaletteInternal = this.buildPaletteNeuQuant;
+            break;
         default:
             throw new Error('Unknown Palette method.');
     }
@@ -103,6 +108,43 @@ GIFGenerator.prototype.getImageData = function(image) {
 };
 
 GIFGenerator.paletteMethods = paletteMethods;
+
+GIFGenerator.prototype.buildPaletteNeuQuant = function(data) {
+    
+    var skip = Math.ceil((data.length / 4) / 10000);
+    var step = 4 * skip;
+
+    var superPalette = [];
+
+    var denominator = this.denominator;
+
+    for (var j = 0, jl = data.length; j < jl; j += step) {
+        
+        var r = Math.floor(data[j + 0] / denominator) * denominator;
+        var g = Math.floor(data[j + 1] / denominator) * denominator;
+        var b = Math.floor(data[j + 2] / denominator) * denominator;
+        
+        superPalette.push(r);
+        superPalette.push(g);
+        superPalette.push(b);
+    }
+
+    var imgq = new NeuQuant(superPalette, 10);
+    imgq.buildColormap(); // create reduced palette
+    var palette = imgq.getColormap();
+
+    var finalPalette = [];
+
+    for (var i = 0, l = palette.length; i < l; i += 3) {
+        var r = palette[i];
+        var g = palette[i+1];
+        var b = palette[i+2];
+
+        var color = r << 16 | g << 8 | b;
+        finalPalette.push([color, 1, r, g, b]);
+    }
+    return finalPalette;
+};
 
 GIFGenerator.prototype.buildPaletteVotes = function(data) {
 
