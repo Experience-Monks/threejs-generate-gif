@@ -263,6 +263,10 @@ GIFGenerator.prototype.finish = function() {
         this.renderTarget.dispose();
         this.tonemap.dispose();
 
+        delete this.postProcessor.renderTarget;
+        delete this.renderTarget;
+        delete this.tonemap;
+
         delete this.postProcessor;
         delete this.imageDataArraySource;
         delete this.pixels ;
