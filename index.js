@@ -258,22 +258,23 @@ GIFGenerator.prototype.finish = function() {
             string.push(String.fromCharCode.apply(null, this.buffer.subarray(i, i+CHUNK_SZ)));
         }
         string = string.join('');
-
-        this.postProcessor.renderTarget.dispose();
+       
         this.renderTarget.dispose();
         this.tonemap.dispose();
 
-        delete this.postProcessor.renderTarget;
         delete this.renderTarget;
         delete this.tonemap;
 
+        this.postProcessor.dispose();
         delete this.postProcessor;
+
         delete this.imageDataArraySource;
         delete this.pixels ;
         delete this.palette;
         delete this.palette32;
         delete this.buffer;
-     
+        delete this.gif;
+
         this.onCompleteCallback('data:image/gif;base64,' + btoa(string));
 };
 

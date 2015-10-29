@@ -192,4 +192,27 @@ PostProcessor.prototype.update = function() {
 	this.renderer.render(this.scene, this.camera, this.renderTarget);
 };
 
+PostProcessor.prototype.dispose = function() {
+
+	this.renderTarget.dispose();
+	delete this.renderTarget;
+
+	this.oldRenderTarget.dispose();
+	delete this.oldRenderTarget;
+
+	if (this.tonemap) {
+	    this.tonemap.dispose();
+		delete this.tonemap;
+	}
+	
+	if (this.material.uniforms.tonemap.value) {
+	    this.material.uniforms.tonemap.value.dispose();
+	    delete this.material.uniforms.tonemap.value;            
+	}
+
+	if (this.material.uniforms.texture1.value) {
+	    this.material.uniforms.texture1.value.dispose();
+	    delete this.material.uniforms.texture1.value;
+	}
+};
 module.exports = PostProcessor;
