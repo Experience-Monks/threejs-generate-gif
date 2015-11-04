@@ -6,6 +6,9 @@ var defaults = require('lodash.defaults');
 var PostProcessor = require('./PostProcessor');
 var NeuQuant = require('./TypedNeuQuant');
 
+var btoaNew = require('btoa');
+var base64 = require('base-64');
+
 var paletteMethods = {
     KMEANS: 0,
     VOTES: 1,
@@ -317,7 +320,7 @@ GIFGenerator.prototype.finish = function() {
         delete this.buffer;
         delete this.gif;
 
-        this.onCompleteCallback('data:image/gif;base64,' + btoa(string));
+        this.onCompleteCallback('data:image/gif;base64,' + base64.encode(string));
 };
 
 GIFGenerator.prototype.addFrame = function(delay) {
