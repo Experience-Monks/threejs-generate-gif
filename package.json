@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "base-64": "^0.1.0",
-    "btoa": "^1.1.2",
     "clamp": "^1.0.1",
     "cluster-kmeans": "^1.0.2",
     "lodash": "^3.10.0",

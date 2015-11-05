@@ -6,8 +6,8 @@ var defaults = require('lodash.defaults');
 var PostProcessor = require('./PostProcessor');
 var NeuQuant = require('./TypedNeuQuant');
 
-var btoaNew = require('btoa');
 var base64 = require('base-64');
+
 
 var paletteMethods = {
     KMEANS: 0,
@@ -106,6 +106,10 @@ GIFGenerator.prototype.getImageData = function(image) {
     canvas.height = image.height;
 
     var context = canvas.getContext( '2d' );
+
+    context.translate(0, canvas.height)
+    context.scale(1, -1);
+
     context.drawImage( image, 0, 0 );
     return context.getImageData( 0, 0, image.width, image.height );
 };
@@ -132,7 +136,7 @@ GIFGenerator.prototype.buildPaletteNeuQuant = function(data) {
         superPalette.push(b);
     }
 
-    var imgq = new NeuQuant(superPalette, 10);
+    var imgq = new NeuQuant(superPalette, 1);
     imgq.buildColormap(); // create reduced palette
     var palette = imgq.getColormap();
 
@@ -220,8 +224,11 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
         var closestIndex = -1;
 
         var tempDistance;
-        for (var i = 0; i < palette.length; i++) {
-            tempDistance = Math.abs(r - palette[i][2]) + Math.abs(g - palette[i][3]) + Math.abs(b - palette[i][4]);
+
+        for (var i = 0, len = palette.length; i < len; i++) {
+            var color = palette[i];
+            tempDistance = Math.abs(r - color[2]) + Math.abs(g - color[3]) + Math.abs(b - color[4]);
+
             if (tempDistance < distance) {
                 distance = tempDistance;
                 closestIndex = i;
@@ -251,7 +258,7 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
     newTonemap.minFilter = THREE.NearestFilter;
     newTonemap.magFilter = THREE.NearestFilter;
     newTonemap.generateMipMaps = false;
-    newTonemap.flipY = true;
+    newTonemap.flipY = false;
 
     newTonemap.needsUpdate = true;
     this.renderer.setTexture(newTonemap, 0);
@@ -294,12 +301,11 @@ GIFGenerator.prototype.buildPaletteKMeans = function(data) {
 GIFGenerator.prototype.finish = function() {
 
         var length = this.gif.end();
-
         this.buffer = this.buffer.subarray(0, length);
 
         var CHUNK_SZ = 0x10000;
         var string = [];
-        for (var i=0; i < length; i+=CHUNK_SZ) {
+        for (var i = 0, l = length; i < l; i+=CHUNK_SZ) {
             string.push(String.fromCharCode.apply(null, this.buffer.subarray(i, i+CHUNK_SZ)));
         }
         string = string.join('');
