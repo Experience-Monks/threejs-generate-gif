@@ -220,14 +220,15 @@ GIFGenerator.prototype.buildPalette = function(data) {
 GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {   
 
     function findClosestIndex(r, g, b) {
-        var distance = Infinity;
-        var closestIndex = -1;
 
-        var tempDistance;
+        var color0 = palette[0];
 
-        for (var i = 0, len = palette.length; i < len; i++) {
+        var closestIndex = 0;
+        var distance = Math.pow(r - color0[2], 2) + Math.pow(g - color0[3], 2) + Math.pow(b - color0[4], 2);
+
+        for (var i = 1, len = palette.length; i < len; i++) {
             var color = palette[i];
-            tempDistance = Math.abs(r - color[2]) + Math.abs(g - color[3]) + Math.abs(b - color[4]);
+            var tempDistance = Math.pow(r - color[2], 2) + Math.pow(g - color[3], 2) + Math.pow(b - color[4], 2);
 
             if (tempDistance < distance) {
                 distance = tempDistance;
