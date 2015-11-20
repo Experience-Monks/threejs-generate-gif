@@ -184,6 +184,7 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
 
 PostProcessor.prototype.setTonemap = function(tonemap) {
 	this.material.uniforms.tonemap.value = tonemap;
+	this.tonemap = tonemap;
 };
 
 PostProcessor.prototype.update = function() {

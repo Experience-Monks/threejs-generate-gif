@@ -8,6 +8,7 @@ var NeuQuant = require('./TypedNeuQuant');
 
 var base64 = require('base-64');
 
+var TonemapGeneratorHelper = require('threejs-generate-tonemap');
 
 var paletteMethods = {
     KMEANS: 0,
@@ -238,31 +239,35 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
         return closestIndex;
     }
     __markTime('get tonemap default data.');
-    var tonemapPixels = this.getImageData(this.tonemap.image);
+    //var tonemapPixels = this.getImageData(this.tonemap.image);
     __markTime('start building tonemap');
 
-    cursor = 0;
-    var data = tonemapPixels.data;
-    for (var i = 0, l = data.length; i < l; i += 4) {
+    // cursor = 0;
+    // var data = tonemapPixels.data;
+    // for (var i = 0, l = data.length; i < l; i += 4) {
         
-        var r = data[i];
-        var g = data[i + 1];
-        var b = data[i + 2];
+    //     var r = data[i];
+    //     var g = data[i + 1];
+    //     var b = data[i + 2];
 
-        var index = findClosestIndex(r, g, b);
-        data[i] = data[i + 1] = data[i + 2] = index;
-    }
+    //     var index = findClosestIndex(r, g, b);
+    //     data[i] = data[i + 1] = data[i + 2] = index;
+    // }
+
+    var tonemapGeneratorHelper = new TonemapGeneratorHelper(this.renderer, this.tonemap, palette);
+    var newTonemap = tonemapGeneratorHelper.finalRenderTargetFlipped;
+
     __markTime('use tonemap');
 
-    var newTonemap = new THREE.DataTexture(new Uint8Array(tonemapPixels.data), tonemapPixels.width, tonemapPixels.height, THREE.RGBAFormat );
+    //new THREE.DataTexture(new Uint8Array(tonemapPixels.data), tonemapPixels.width, tonemapPixels.height, THREE.RGBAFormat );
+    //tonemapGeneratorHelper.dispose();
 
-    newTonemap.minFilter = THREE.NearestFilter;
-    newTonemap.magFilter = THREE.NearestFilter;
-    newTonemap.generateMipMaps = false;
-    newTonemap.flipY = false;
+    // newTonemap.minFilter = THREE.NearestFilter;
+    // newTonemap.magFilter = THREE.NearestFilter;
+    // newTonemap.generateMipMaps = false;
+    // newTonemap.flipY = false;
 
-    newTonemap.needsUpdate = true;
-    this.renderer.setTexture(newTonemap, 0);
+    //newTonemap.needsUpdate = true;
         
     this.postProcessor.setTonemap(newTonemap);
 
