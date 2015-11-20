@@ -194,7 +194,7 @@ GIFGenerator.prototype.buildPaletteVotes = function(data) {
 GIFGenerator.prototype.buildPalette = function(data) {
 
     if (!data) {
-        this.postProcessor.update();    
+        this.postProcessor.update(true);    
 
         this.renderer.setRenderTarget(this.postProcessor.renderTarget);
         this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);

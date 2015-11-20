@@ -148,7 +148,7 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
         '		texPos1.y = 1.0-texPos1.y;',
         '	#endif',
                     
-        '	lowp vec4 newColor1 = texture2D(lookupTable1, texPos1);',
+        '	mediump vec4 newColor1 = texture2D(lookupTable1, texPos1);',
         '	return newColor1;',
         '}',
 
@@ -187,9 +187,11 @@ PostProcessor.prototype.setTonemap = function(tonemap) {
 	this.tonemap = tonemap;
 };
 
-PostProcessor.prototype.update = function() {
+PostProcessor.prototype.update = function(dontIncreaseTime) {
 
-	this.material.uniforms.time.value += 0.025;
+	if (!dontIncreaseTime) {		
+		this.material.uniforms.time.value += 0.025;
+	}
 	this.renderer.render(this.scene, this.camera, this.renderTarget);
 };
 
