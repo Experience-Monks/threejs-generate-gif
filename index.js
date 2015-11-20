@@ -220,58 +220,59 @@ GIFGenerator.prototype.buildPalette = function(data) {
 
 GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {   
 
-    // function findClosestIndex(r, g, b) {
+    function findClosestIndex(r, g, b) {
 
-    //     var color0 = palette[0];
+        var color0 = palette[0];
 
-    //     var closestIndex = 0;
-    //     var distance = Math.pow(r - color0[2], 2) + Math.pow(g - color0[3], 2) + Math.pow(b - color0[4], 2);
+        var closestIndex = 0;
+        var distance = Math.pow(r - color0[2], 2) + Math.pow(g - color0[3], 2) + Math.pow(b - color0[4], 2);
 
-    //     for (var i = 1, len = palette.length; i < len; i++) {
-    //         var color = palette[i];
-    //         var tempDistance = Math.pow(r - color[2], 2) + Math.pow(g - color[3], 2) + Math.pow(b - color[4], 2);
+        for (var i = 1, len = palette.length; i < len; i++) {
+            var color = palette[i];
+            var tempDistance = Math.pow(r - color[2], 2) + Math.pow(g - color[3], 2) + Math.pow(b - color[4], 2);
 
-    //         if (tempDistance < distance) {
-    //             distance = tempDistance;
-    //             closestIndex = i;
-    //         }
-    //     }
-    //     return closestIndex;
-    // }
+            if (tempDistance < distance) {
+                distance = tempDistance;
+                closestIndex = i;
+            }
+        }
+        return closestIndex;
+    }
     __markTime('get tonemap default data.');
-    //var tonemapPixels = this.getImageData(this.tonemap.image);
+    var tonemapPixels = this.getImageData(this.tonemap.image);
     __markTime('start building tonemap');
 
-    // cursor = 0;
-    // var data = tonemapPixels.data;
-    // for (var i = 0, l = data.length; i < l; i += 4) {
+    cursor = 0;
+    var data = tonemapPixels.data;
+    for (var i = 0, l = data.length; i < l; i += 4) {
         
-    //     var r = data[i];
-    //     var g = data[i + 1];
-    //     var b = data[i + 2];
+        var r = data[i];
+        var g = data[i + 1];
+        var b = data[i + 2];
 
-    //     var index = findClosestIndex(r, g, b);
-    //     data[i] = data[i + 1] = data[i + 2] = index;
-    // }
+        var index = findClosestIndex(r, g, b);
+        data[i] = data[i + 1] = data[i + 2] = index;
+    }
 
-    var tonemapGeneratorHelper = new TonemapGeneratorHelper(this.renderer, this.tonemap, palette);
-    var newTonemap = tonemapGeneratorHelper.finalRenderTargetFlipped;
-
-    __markTime('use tonemap');
-
-    //new THREE.DataTexture(new Uint8Array(tonemapPixels.data), tonemapPixels.width, tonemapPixels.height, THREE.RGBAFormat );
-    //tonemapGeneratorHelper.dispose();
-
+    // var newTonemap = new THREE.DataTexture(new Uint8Array(tonemapPixels.data), tonemapPixels.width, tonemapPixels.height, THREE.RGBAFormat );
     // newTonemap.minFilter = THREE.NearestFilter;
     // newTonemap.magFilter = THREE.NearestFilter;
     // newTonemap.generateMipMaps = false;
     // newTonemap.flipY = false;
+    // newTonemap.needsUpdate = true;
 
-    //newTonemap.needsUpdate = true;
-    
+    var tonemapGeneratorHelper = new TonemapGeneratorHelper(this.renderer, this.tonemap, palette);
+    var newTonemap = tonemapGeneratorHelper.finalRenderTargetFlipped;
+    newTonemap.minFilter = THREE.NearestFilter;
+    newTonemap.magFilter = THREE.NearestFilter;
+    newTonemap.generateMipMaps = false;
+    newTonemap.flipY = false;
     this.tonemapGeneratorHelper = tonemapGeneratorHelper;
-    this.postProcessor.setTonemap(newTonemap);
 
+    
+    __markTime('use tonemap');
+
+    this.postProcessor.setTonemap(newTonemap);
     this.globalPaletteToneMapBuilt = true;
 };
 
@@ -326,8 +327,10 @@ GIFGenerator.prototype.finish = function() {
         this.postProcessor.dispose();
         delete this.postProcessor;
 
-        this.tonemapGeneratorHelper.dispose();
-        delete this.tonemapGeneratorHelper;
+        if (this.tonemapGeneratorHelper) {
+            this.tonemapGeneratorHelper.dispose();
+            delete this.tonemapGeneratorHelper;           
+        }
         
         delete this.imageDataArraySource;
         delete this.pixels ;
