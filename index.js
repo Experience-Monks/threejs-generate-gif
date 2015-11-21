@@ -39,6 +39,7 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
         dither: true,
         denominator: 8,
         delay: 5,
+        mobile: false,
         lutImagePath: 'assets/tonemaps/original.png'
     });
 
@@ -262,7 +263,7 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
     // newTonemap.needsUpdate = true;
 
     var tonemapGeneratorHelper = new TonemapGeneratorHelper(this.renderer, this.tonemap, palette);
-    var newTonemap = tonemapGeneratorHelper.finalRenderTargetFlipped;
+    var newTonemap = this.mobile ? tonemapGeneratorHelper.finalRenderTarget : tonemapGeneratorHelper.finalRenderTargetFlipped;
     newTonemap.minFilter = THREE.NearestFilter;
     newTonemap.magFilter = THREE.NearestFilter;
     newTonemap.generateMipMaps = false;
