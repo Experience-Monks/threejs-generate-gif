@@ -16,7 +16,7 @@
     "lodash": "^3.10.0",
     "lodash.defaults": "^3.1.2",
     "omggif": "^1.0.8",
-    "threejs-generate-tonemap": "^1.0.4"
+    "threejs-generate-tonemap": "^1.0.5"
   },
   "devDependencies": {
     "three": "^0.71.0"
