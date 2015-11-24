@@ -88,8 +88,6 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
         loop: 0
     });
 
-    var pixels = new Uint8Array(this.size.width * this.size.height);
-
     var context3d = this.renderer.getContext();
     var imageDataArraySource = new Uint8Array(this.size.width * this.size.height * 4);
 
@@ -97,7 +95,6 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
     this.imageDataArraySource = imageDataArraySource;
 
     this.buffer = buffer;
-    this.pixels = pixels;
 
     this.gif = gif;
 }
@@ -221,24 +218,24 @@ GIFGenerator.prototype.buildPalette = function(data) {
 
 GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {   
 
-    function findClosestIndex(r, g, b) {
+    // function findClosestIndex(r, g, b) {
 
-        var color0 = palette[0];
+    //     var color0 = palette[0];
 
-        var closestIndex = 0;
-        var distance = Math.pow(r - color0[2], 2) + Math.pow(g - color0[3], 2) + Math.pow(b - color0[4], 2);
+    //     var closestIndex = 0;
+    //     var distance = Math.pow(r - color0[2], 2) + Math.pow(g - color0[3], 2) + Math.pow(b - color0[4], 2);
 
-        for (var i = 1, len = palette.length; i < len; i++) {
-            var color = palette[i];
-            var tempDistance = Math.pow(r - color[2], 2) + Math.pow(g - color[3], 2) + Math.pow(b - color[4], 2);
+    //     for (var i = 1, len = palette.length; i < len; i++) {
+    //         var color = palette[i];
+    //         var tempDistance = Math.pow(r - color[2], 2) + Math.pow(g - color[3], 2) + Math.pow(b - color[4], 2);
 
-            if (tempDistance < distance) {
-                distance = tempDistance;
-                closestIndex = i;
-            }
-        }
-        return closestIndex;
-    }
+    //         if (tempDistance < distance) {
+    //             distance = tempDistance;
+    //             closestIndex = i;
+    //         }
+    //     }
+    //     return closestIndex;
+    // }
     __markTime('get tonemap default data.');
     // var tonemapPixels = this.getImageData(this.tonemap.image);
     __markTime('start building tonemap');
@@ -270,7 +267,10 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
     newTonemap.flipY = false;
     this.tonemapGeneratorHelper = tonemapGeneratorHelper;
 
-    
+    if (this.tonemap) {
+        this.tonemap.dispose();
+        delete this.tonemap;
+    }
     __markTime('use tonemap');
 
     this.postProcessor.setTonemap(newTonemap);
@@ -320,10 +320,7 @@ GIFGenerator.prototype.finish = function() {
         string = string.join('');
        
         this.renderTarget.dispose();
-        this.tonemap.dispose();
-
         delete this.renderTarget;
-        delete this.tonemap;
 
         this.postProcessor.dispose();
         delete this.postProcessor;
@@ -334,7 +331,6 @@ GIFGenerator.prototype.finish = function() {
         }
         
         delete this.imageDataArraySource;
-        delete this.pixels ;
         delete this.palette;
         delete this.palette32;
         delete this.buffer;
@@ -352,13 +348,13 @@ GIFGenerator.prototype.addFrame = function(delay) {
     this.renderer.setRenderTarget(this.postProcessor.renderTarget);
     this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
-    var data = this.imageDataArraySource;
+    this.gif.addFrame(0, 0, this.size.width, this.size.height, 
 
-    for (var i = 0, k = 0, l = data.length; i < l; i += 4, k++) {
-        this.pixels[k] = data[i];
-    }
+    this.imageDataArraySource.filter(function(element, index) {
+        return (index % 4 == 0);
+    }), 
 
-    this.gif.addFrame(0, 0, this.size.width, this.size.height, this.pixels, {
+    {
         palette: this.palette32,
         delay: delay
     });

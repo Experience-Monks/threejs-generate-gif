@@ -183,6 +183,17 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
 }
 
 PostProcessor.prototype.setTonemap = function(tonemap) {
+	
+	if (this.material.uniforms.tonemap.value) {
+	    this.material.uniforms.tonemap.value.dispose();
+	    delete this.material.uniforms.tonemap.value;            
+	}
+
+	if (this.tonemap) {
+		this.tonemap.dispose();
+		delete this.tonemap;		
+	}
+
 	this.material.uniforms.tonemap.value = tonemap;
 	this.tonemap = tonemap;
 };
@@ -217,5 +228,9 @@ PostProcessor.prototype.dispose = function() {
 	    this.material.uniforms.texture1.value.dispose();
 	    delete this.material.uniforms.texture1.value;
 	}
+
+	delete this.scene;
+	delete this.camera;
+	delete this.material;
 };
 module.exports = PostProcessor;
