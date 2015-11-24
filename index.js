@@ -240,20 +240,20 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
         return closestIndex;
     }
     __markTime('get tonemap default data.');
-    var tonemapPixels = this.getImageData(this.tonemap.image);
+    // var tonemapPixels = this.getImageData(this.tonemap.image);
     __markTime('start building tonemap');
 
-    cursor = 0;
-    var data = tonemapPixels.data;
-    for (var i = 0, l = data.length; i < l; i += 4) {
+    // cursor = 0;
+    // var data = tonemapPixels.data;
+    // for (var i = 0, l = data.length; i < l; i += 4) {
         
-        var r = data[i];
-        var g = data[i + 1];
-        var b = data[i + 2];
+    //     var r = data[i];
+    //     var g = data[i + 1];
+    //     var b = data[i + 2];
 
-        var index = findClosestIndex(r, g, b);
-        data[i] = data[i + 1] = data[i + 2] = index;
-    }
+    //     var index = findClosestIndex(r, g, b);
+    //     data[i] = data[i + 1] = data[i + 2] = index;
+    // }
 
     // var newTonemap = new THREE.DataTexture(new Uint8Array(tonemapPixels.data), tonemapPixels.width, tonemapPixels.height, THREE.RGBAFormat );
     // newTonemap.minFilter = THREE.NearestFilter;
