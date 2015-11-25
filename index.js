@@ -27,6 +27,71 @@ function __markTime(label) {
     lastTime = time;
 }
 
+// Adapted from base-64 npm module to use less memory
+function btoa2(input) {
+    var TABLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+    input = String(input);
+    if (/[^\0-\xFF]/.test(input)) {
+        // Note: no need to special-case astral symbols here, as surrogates are
+        // matched, and the input is supposed to only contain ASCII anyway.
+        error(
+            'The string to be encoded contains characters outside of the ' +
+            'Latin1 range.'
+        );
+    }
+    var padding = input.length % 3;
+    var output = '';
+    var position = -1;
+    var a, b, c;
+    var buffer;
+    // Make sure any padding is handled outside of the loop.
+    var length = input.length - padding;
+    var outputBuffer = new Uint8Array(input.length * 1.5);
+
+    var k = 0;
+
+    while (++position < length) {
+        // Read three bytes, i.e. 24 bits.
+        a = input.charCodeAt(position) << 16;
+        b = input.charCodeAt(++position) << 8;
+        c = input.charCodeAt(++position);
+        buffer = a + b + c;
+        // Turn the 24 bits into four chunks of 6 bits each, and append the
+        // matching character for each of them to the output.
+        outputBuffer[k++] = TABLE.charAt(buffer >> 18 & 0x3F).charCodeAt(0);
+        outputBuffer[k++] = TABLE.charAt(buffer >> 12 & 0x3F).charCodeAt(0);
+        outputBuffer[k++] = TABLE.charAt(buffer >> 6 & 0x3F).charCodeAt(0);
+        outputBuffer[k++] = TABLE.charAt(buffer & 0x3F).charCodeAt(0);
+    }
+
+    if (padding == 2) {
+        a = input.charCodeAt(position) << 8;
+        b = input.charCodeAt(++position);
+        buffer = a + b;
+
+        outputBuffer[k++] = TABLE.charAt(buffer >> 10).charCodeAt(0);
+        outputBuffer[k++] = TABLE.charAt((buffer >> 4) & 0x3F).charCodeAt(0);
+        outputBuffer[k++] = TABLE.charAt((buffer << 2) & 0x3F).charCodeAt(0);
+        outputBuffer[k++] = '='.charCodeAt(0);
+    } else if (padding == 1) {
+        buffer = input.charCodeAt(position);
+
+        outputBuffer[k++] = TABLE.charAt(buffer >> 2).charCodeAt(0);
+        outputBuffer[k++] = TABLE.charAt((buffer << 4) & 0x3F).charCodeAt(0);
+        outputBuffer[k++] = '='.charCodeAt(0);
+        outputBuffer[k++] = '='.charCodeAt(0);
+    }
+
+    var CHUNK_SZ = 0x10000;
+    var string = [];
+    for (var i = 0, l = outputBuffer.length; i < l; i+=CHUNK_SZ) {
+        string.push(String.fromCharCode.apply(null, outputBuffer.subarray(i, i+CHUNK_SZ)));
+    }
+    output = string.join('');
+    return output;
+}
+
 function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
     
     opts = opts || {};
@@ -310,15 +375,7 @@ GIFGenerator.prototype.buildPaletteKMeans = function(data) {
 GIFGenerator.prototype.finish = function() {
 
         var length = this.gif.end();
-        this.buffer = this.buffer.subarray(0, length);
 
-        var CHUNK_SZ = 0x10000;
-        var string = [];
-        for (var i = 0, l = length; i < l; i+=CHUNK_SZ) {
-            string.push(String.fromCharCode.apply(null, this.buffer.subarray(i, i+CHUNK_SZ)));
-        }
-        string = string.join('');
-       
         this.renderTarget.dispose();
         delete this.renderTarget;
 
@@ -330,13 +387,24 @@ GIFGenerator.prototype.finish = function() {
             delete this.tonemapGeneratorHelper;           
         }
         
+        delete this.pixels;
         delete this.imageDataArraySource;
         delete this.palette;
         delete this.palette32;
-        delete this.buffer;
         delete this.gif;
 
-        this.onCompleteCallback('data:image/gif;base64,' + base64.encode(string));
+        this.buffer = this.buffer.subarray(0, length);
+
+        var CHUNK_SZ = 0x10000;
+        var string = [];
+        for (var i = 0, l = length; i < l; i+=CHUNK_SZ) {
+            string.push(String.fromCharCode.apply(null, this.buffer.subarray(i, i+CHUNK_SZ)));
+        }
+        string = string.join('');
+     
+        delete this.buffer;
+
+        this.onCompleteCallback('data:image/gif;base64,' + btoa2(string));
 };
 
 GIFGenerator.prototype.addFrame = function(delay) {
@@ -348,13 +416,14 @@ GIFGenerator.prototype.addFrame = function(delay) {
     this.renderer.setRenderTarget(this.postProcessor.renderTarget);
     this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
-    this.gif.addFrame(0, 0, this.size.width, this.size.height, 
-
-    this.imageDataArraySource.filter(function(element, index) {
-        return (index % 4 == 0);
-    }), 
-
-    {
+    if (!this.pixels) {
+        this.pixels = new Uint8Array(this.size.width * this.size.height);
+    }
+    for (var i = 0, k = 0, l = this.imageDataArraySource.length; i < l; i += 4, k++) {
+        this.pixels[k] = this.imageDataArraySource[i];
+    }
+    
+    this.gif.addFrame(0, 0, this.size.width, this.size.height, this.pixels, {
         palette: this.palette32,
         delay: delay
     });
