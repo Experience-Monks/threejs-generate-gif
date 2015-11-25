@@ -47,7 +47,7 @@ function btoa2(input) {
     var buffer;
     // Make sure any padding is handled outside of the loop.
     var length = input.length - padding;
-    var outputBuffer = new Uint8Array(input.length * 1.5);
+    var outputBuffer = new Uint8Array(~~(input.length * 1.5));
 
     var k = 0;
 
@@ -374,22 +374,6 @@ GIFGenerator.prototype.buildPaletteKMeans = function(data) {
 
 GIFGenerator.prototype.finish = function() {
 
-        this.renderTarget.dispose();
-        delete this.renderTarget;
-
-        this.postProcessor.dispose();
-        delete this.postProcessor;
-
-        if (this.tonemapGeneratorHelper) {
-            this.tonemapGeneratorHelper.dispose();
-            delete this.tonemapGeneratorHelper;           
-        }
-        
-        delete this.pixels;
-        delete this.imageDataArraySource;
-        delete this.palette;
-        delete this.palette32;
-
         var length = this.gif.end();
         this.buffer = this.buffer.subarray(0, length);
 
@@ -400,6 +384,25 @@ GIFGenerator.prototype.finish = function() {
         }
         string = string.join('');
      
+        if (this.renderTarget) {
+            this.renderTarget.dispose();
+            delete this.renderTarget;    
+        }
+        if (this.postProcessor) {
+            this.postProcessor.dispose();
+            delete this.postProcessor;   
+        }
+        
+        if (this.tonemapGeneratorHelper) {
+            this.tonemapGeneratorHelper.dispose();
+            delete this.tonemapGeneratorHelper;           
+        }
+        
+        delete this.pixels;
+        delete this.imageDataArraySource;
+        delete this.palette;
+        delete this.palette32;
+
         delete this.buffer;
         delete this.gif;
 
