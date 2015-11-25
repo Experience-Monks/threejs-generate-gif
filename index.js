@@ -374,8 +374,6 @@ GIFGenerator.prototype.buildPaletteKMeans = function(data) {
 
 GIFGenerator.prototype.finish = function() {
 
-        var length = this.gif.end();
-
         this.renderTarget.dispose();
         delete this.renderTarget;
 
@@ -391,8 +389,8 @@ GIFGenerator.prototype.finish = function() {
         delete this.imageDataArraySource;
         delete this.palette;
         delete this.palette32;
-        delete this.gif;
 
+        var length = this.gif.end();
         this.buffer = this.buffer.subarray(0, length);
 
         var CHUNK_SZ = 0x10000;
@@ -403,6 +401,7 @@ GIFGenerator.prototype.finish = function() {
         string = string.join('');
      
         delete this.buffer;
+        delete this.gif;
 
         this.onCompleteCallback('data:image/gif;base64,' + btoa2(string));
 };
