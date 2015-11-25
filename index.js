@@ -175,7 +175,9 @@ GIFGenerator.prototype.getImageData = function(image) {
     context.scale(1, -1);
 
     context.drawImage( image, 0, 0 );
-    return context.getImageData( 0, 0, image.width, image.height );
+    var data = context.getImageData( 0, 0, image.width, image.height );
+    canvas = null;
+    return data;
 };
 
 GIFGenerator.paletteMethods = paletteMethods;
@@ -258,7 +260,6 @@ GIFGenerator.prototype.buildPalette = function(data) {
 
     if (!data) {
         this.postProcessor.update(true);    
-
         this.renderer.setRenderTarget(this.postProcessor.renderTarget);
         this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 

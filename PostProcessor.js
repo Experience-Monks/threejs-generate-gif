@@ -179,6 +179,7 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
 		new THREE.PlaneBufferGeometry( 2, 2 ),
 		this.material
 	);
+	this.quad = quad;
 	scene.add(quad);	
 }
 
@@ -229,8 +230,16 @@ PostProcessor.prototype.dispose = function() {
 	    delete this.material.uniforms.texture1.value;
 	}
 
+	this.scene.remove(this.quad);
+	this.quad.geometry.dispose();
+	delete this.quad.geometry;
+	delete this.quad.material;
+	delete this.quad;
+
 	delete this.scene;
 	delete this.camera;
+
+	this.material.dispose();
 	delete this.material;
 };
 module.exports = PostProcessor;
