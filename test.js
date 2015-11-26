@@ -29,6 +29,9 @@ function animate() {
     }
 }
 
+function dispose() {
+}
+
 function render() {
     time = time + 0.01 % 1;
 
@@ -100,6 +103,8 @@ function init() {
         var image = document.createElement('img');
         image.src = str;
         document.body.appendChild(image);
+
+        dispose();
     }
 
     gifGenerator = new GIFGenerator(renderer, opts, animate, receiveImageURI);
