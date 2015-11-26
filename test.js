@@ -5,29 +5,28 @@ var gifGenerator;
 
 var camera, scene, renderer, mesh;
 
-var width = height = 300;
+var width = height = 600;
 var time = 0;
-var frames = 100;
-var current = 0;
-
-// Main function
-init();
+var frames = 68;
 
 function animate() {
 
-    requestAnimationFrame(animate);
-    render();    
+    for (var current = -1; current <= frames; current++) {
 
-    if (current < frames)
-    {
-        gifGenerator.addFrame();
+        render();    
+
+        if (current === -1) {
+            gifGenerator.buildPalette();
+        }
+        else if (current < frames)
+        {
+            gifGenerator.addFrame();
+        }
+        else if (current >= frames)
+        {
+            gifGenerator.finish();
+        }
     }
-    else if (current === frames)
-    {
-        gifGenerator.finish();
-    }
-    current++;
-    console.log(current);
 }
 
 function render() {
@@ -39,7 +38,7 @@ function render() {
     meshBlue.position.x = Math.cos(time * Math.PI * 2) * 200;
     meshBlue.position.y = Math.sin(time * Math.PI * 2) * 200;
 
-    renderer.render(scene, camera);
+    renderer.render(scene, camera, gifGenerator.renderTarget);
 }
 
 function init() {
@@ -52,17 +51,17 @@ function init() {
     var geometry = new THREE.SphereGeometry(200, 64, 32);
     var material = new THREE.MeshPhongMaterial({
         color: 0xff0000,
-        side: THREE.DoubleSide,
+        side: THREE.DoubleSide
     });
 
     var materialGreen = new THREE.MeshPhongMaterial({
         color: 0x00ff00,
-        side: THREE.DoubleSide,
+        side: THREE.DoubleSide
     });
 
     var materialBlue = new THREE.MeshPhongMaterial({
         color: 0x0000ff,
-        side: THREE.DoubleSide,
+        side: THREE.DoubleSide
     });
 
     var light = new THREE.AmbientLight( 0x444444 ); // soft white light
@@ -86,9 +85,15 @@ function init() {
     renderer.setSize(width, height);
 
     var opts = {
-        frames: frames,
-        size: {width: width, height: height},
-        recalculatePalettePerFrame: false
+        size: { width: 300, height: 300 },
+        paletteMethod: GIFGenerator.paletteMethods.NEUQUANT,
+        superSample: true,
+        dither: true,
+        denominator: 8,
+        mobile: false,
+        lutImagePath: './original.png',               
+        // Decorator Params
+        fps: 15
     };
 
     function receiveImageURI(str) {
@@ -97,13 +102,9 @@ function init() {
         document.body.appendChild(image);
     }
 
-    gifGenerator = new GIFGenerator(renderer, opts, receiveImageURI);
-
-    gifGenerator.init();
-    animate();
-
+    gifGenerator = new GIFGenerator(renderer, opts, animate, receiveImageURI);
     document.body.appendChild(renderer.domElement);
 }
 
-
+init();
 

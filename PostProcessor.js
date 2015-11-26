@@ -232,6 +232,7 @@ PostProcessor.prototype.dispose = function() {
 
 	this.scene.remove(this.quad);
 	this.quad.geometry.dispose();
+	this.quad.material.dispose();
 	delete this.quad.geometry;
 	delete this.quad.material;
 	delete this.quad;
@@ -239,7 +240,6 @@ PostProcessor.prototype.dispose = function() {
 	delete this.scene;
 	delete this.camera;
 
-	this.material.dispose();
 	delete this.material;
 };
 module.exports = PostProcessor;
