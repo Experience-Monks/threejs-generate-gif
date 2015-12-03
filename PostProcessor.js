@@ -185,15 +185,15 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
 
 PostProcessor.prototype.setTonemap = function(tonemap) {
 	
-	if (this.material.uniforms.tonemap.value) {
-	    this.material.uniforms.tonemap.value.dispose();
-	    delete this.material.uniforms.tonemap.value;            
-	}
+	// if (this.material.uniforms.tonemap.value) {
+	//     this.material.uniforms.tonemap.value.dispose();
+	//     delete this.material.uniforms.tonemap.value;            
+	// }
 
-	if (this.tonemap) {
-		this.tonemap.dispose();
-		delete this.tonemap;		
-	}
+	// if (this.tonemap) {
+	// 	this.tonemap.dispose();
+	// 	delete this.tonemap;		
+	// }
 
 	this.material.uniforms.tonemap.value = tonemap;
 	this.tonemap = tonemap;

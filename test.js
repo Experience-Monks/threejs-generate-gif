@@ -9,24 +9,31 @@ var width = height = 600;
 var time = 0;
 var frames = 68;
 
+function startAnimation() {
+
+    requestAnimationFrame(animate);
+}
+
+var current = -1;
+
 function animate() {
 
-    for (var current = -1; current <= frames; current++) {
+    render();    
 
-        render();    
-
-        if (current === -1) {
-            gifGenerator.buildPalette();
-        }
-        else if (current < frames)
-        {
-            gifGenerator.addFrame();
-        }
-        else if (current >= frames)
-        {
-            gifGenerator.finish();
-        }
+    if (current === -1) {
+        requestAnimationFrame(animate);
+        gifGenerator.buildPalette();
     }
+    else if (current < frames)
+    {
+        requestAnimationFrame(animate);
+        gifGenerator.addFrame();
+    }
+    else if (current >= frames)
+    {
+        gifGenerator.finish();
+    }
+    current++;
 }
 
 function dispose() {
@@ -42,6 +49,7 @@ function render() {
     meshBlue.position.y = Math.sin(time * Math.PI * 2) * 200;
 
     renderer.render(scene, camera, gifGenerator.renderTarget);
+    renderer.render(scene, camera);
 }
 
 function init() {
@@ -84,14 +92,14 @@ function init() {
     meshBlue.position.set(-200, 0, 0);
 
     renderer = new THREE.WebGLRenderer();
-    renderer.setClearColor(0x7f7f7f, 1);
+    //renderer.setClearColor(0x7f7f7f, 1);
     renderer.setSize(width, height);
 
     var opts = {
         size: { width: 300, height: 300 },
         paletteMethod: GIFGenerator.paletteMethods.NEUQUANT,
         superSample: true,
-        dither: true,
+        dither: false,
         denominator: 8,
         mobile: false,
         lutImagePath: './original.png',               
@@ -104,10 +112,10 @@ function init() {
         image.src = str;
         document.body.appendChild(image);
 
-        dispose();
+        //dispose();
     }
 
-    gifGenerator = new GIFGenerator(renderer, opts, animate, receiveImageURI);
+    gifGenerator = new GIFGenerator(renderer, opts, startAnimation, receiveImageURI);
     document.body.appendChild(renderer.domElement);
 }
 

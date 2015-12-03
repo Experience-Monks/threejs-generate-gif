@@ -127,7 +127,7 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
 
     this.tonemap = THREE.ImageUtils.loadTexture( this.lutImagePath, THREE.UVMapping, 
     function() {
-        _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size, undefined, opts);
+        _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size, _this.tonemap, opts);
         
         initCallback();
     });
@@ -271,11 +271,11 @@ GIFGenerator.prototype.buildPalette = function(data) {
     this.buildGlobalPaletteToneMap(this.palette);
     __markTime('tonemap image complete');
 
-    var powof2 = 1;
-    while (powof2 < this.palette.length) {
-        powof2 <<= 1;
-    }
-    this.palette.length = powof2;
+    // var powof2 = 1;
+    // while (powof2 < this.palette.length) {
+    //     powof2 <<= 1;
+    // }
+    // this.palette.length = powof2;
 
     this.palette32 = new Uint32Array(this.palette.map(function(element) { 
         return element ? element[0] : 0;
@@ -333,10 +333,10 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
     newTonemap.flipY = false;
     this.tonemapGeneratorHelper = tonemapGeneratorHelper;
 
-    if (this.tonemap) {
-        this.tonemap.dispose();
-        delete this.tonemap;
-    }
+    // if (this.tonemap) {
+    //     this.tonemap.dispose();
+    //     delete this.tonemap;
+    // }
     __markTime('use tonemap');
 
     this.postProcessor.setTonemap(newTonemap);
