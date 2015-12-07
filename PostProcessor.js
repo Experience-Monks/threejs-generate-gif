@@ -32,7 +32,8 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
 			time: {type: 'f', value: 0.0},
 			noise: {type: 'f', value: 0.38},
 			texture1: {type: 't', value: oldRenderTarget}, 
-			tonemap: {type: 't', value: tonemap} 
+			tonemap: {type: 't', value: tonemap},
+			renderOriginal: {type: 'b', value: false}
 		},
 		vertexShader: 
 		[
@@ -49,6 +50,7 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
 		'uniform vec2 pixelSize; ',
 		'uniform float time;',
 		'uniform float noise;',
+		'uniform bool renderOriginal;',
 
 		'varying vec2 vUv; ',
 
@@ -171,6 +173,9 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
 		].join('\n') : '',
 
 		'    gl_FragColor = lookup(color, tonemap);',
+
+		'    if (renderOriginal)',
+		'    	gl_FragColor = color;',
 		'  }'
 		].join('\n')
 	});
@@ -199,11 +204,14 @@ PostProcessor.prototype.setTonemap = function(tonemap) {
 	this.tonemap = tonemap;
 };
 
-PostProcessor.prototype.update = function(dontIncreaseTime) {
+PostProcessor.prototype.update = function(renderOriginal, dontIncreaseTime) {
 
 	if (!dontIncreaseTime) {		
 		this.material.uniforms.time.value += 0.025;
 	}
+
+	this.material.uniforms.renderOriginal.value = !!renderOriginal;
+	
 	this.renderer.render(this.scene, this.camera, this.renderTarget);
 };
 

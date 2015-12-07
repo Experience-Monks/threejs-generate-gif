@@ -259,7 +259,7 @@ GIFGenerator.prototype.buildPaletteVotes = function(data) {
 GIFGenerator.prototype.buildPalette = function(data) {
 
     if (!data) {
-        this.postProcessor.update(true);    
+        this.postProcessor.update(true, true);    
         this.renderer.setRenderTarget(this.postProcessor.renderTarget);
         this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
@@ -414,7 +414,7 @@ GIFGenerator.prototype.addFrame = function(delay) {
 
     delay = delay || this.delay;
 
-    this.postProcessor.update();    
+    this.postProcessor.update(true);    
 
     this.renderer.setRenderTarget(this.postProcessor.renderTarget);
     this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
