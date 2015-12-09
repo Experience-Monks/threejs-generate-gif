@@ -213,7 +213,7 @@ GIFGenerator.prototype.buildPaletteNeuQuant = function(data) {
         var g = palette[i+1];
         var b = palette[i+2];
 
-        var color = r << 16 | g << 8 | b;
+        var color = r << 16 | g << 8 | b << 0;
         finalPalette.push([color, 1, r, g, b]);
     }
     return finalPalette;
@@ -259,7 +259,7 @@ GIFGenerator.prototype.buildPaletteVotes = function(data) {
 GIFGenerator.prototype.buildPalette = function(data) {
 
     if (!data) {
-        this.postProcessor.update(true, true);    
+        this.postProcessor.update(1, true);    
         this.renderer.setRenderTarget(this.postProcessor.renderTarget);
         this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
 
@@ -333,10 +333,6 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
     newTonemap.flipY = false;
     this.tonemapGeneratorHelper = tonemapGeneratorHelper;
 
-    // if (this.tonemap) {
-    //     this.tonemap.dispose();
-    //     delete this.tonemap;
-    // }
     __markTime('use tonemap');
 
     this.postProcessor.setTonemap(newTonemap);
@@ -394,6 +390,11 @@ GIFGenerator.prototype.finish = function() {
             delete this.postProcessor;   
         }
         
+        if (this.tonemap) {
+            this.tonemap.dispose();
+            delete this.tonemap;
+        }
+
         if (this.tonemapGeneratorHelper) {
             this.tonemapGeneratorHelper.dispose();
             delete this.tonemapGeneratorHelper;           
@@ -414,7 +415,7 @@ GIFGenerator.prototype.addFrame = function(delay) {
 
     delay = delay || this.delay;
 
-    this.postProcessor.update(true);    
+    this.postProcessor.update();    
 
     this.renderer.setRenderTarget(this.postProcessor.renderTarget);
     this.context3d.readPixels(0, 0, this.size.width, this.size.height, this.context3d.RGBA, this.context3d.UNSIGNED_BYTE, this.imageDataArraySource);
