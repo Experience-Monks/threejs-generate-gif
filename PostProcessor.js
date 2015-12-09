@@ -196,10 +196,10 @@ PostProcessor.prototype.setTonemap = function(tonemap) {
 	//     delete this.material.uniforms.tonemap.value;            
 	// }
 
-	// if (this.tonemap) {
-	// 	this.tonemap.dispose();
-	// 	delete this.tonemap;		
-	// }
+	if (this.tonemap) {
+		this.tonemap.dispose();
+		delete this.tonemap;		
+	}
 
 	this.material.uniforms.tonemap.value = tonemap;
 	this.tonemap = tonemap;

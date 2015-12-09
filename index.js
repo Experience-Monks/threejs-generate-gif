@@ -127,7 +127,7 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
 
     this.tonemap = THREE.ImageUtils.loadTexture( this.lutImagePath, THREE.UVMapping, 
     function() {
-        _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size, _this.tonemap, opts);
+        _this.postProcessor = new PostProcessor(renderer, _this.renderTarget, _this.size, undefined, opts);
         
         initCallback();
     });
@@ -325,6 +325,10 @@ GIFGenerator.prototype.buildGlobalPaletteToneMap = function(palette) {
     // newTonemap.flipY = false;
     // newTonemap.needsUpdate = true;
 
+    if (this.tonemapGeneratorHelper) {
+        this.tonemapGeneratorHelper.dispose();
+        delete this.tonemapGeneratorHelper;           
+    }       
     var tonemapGeneratorHelper = new TonemapGeneratorHelper(this.renderer, this.tonemap, palette);
     var newTonemap = this.mobile ? tonemapGeneratorHelper.finalRenderTarget : tonemapGeneratorHelper.finalRenderTargetFlipped;
     newTonemap.minFilter = THREE.NearestFilter;
