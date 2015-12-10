@@ -101,7 +101,7 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
         size: {width: 300, height: 300},
         paletteMethod: paletteMethods.NEUQUANT,
         superSample: true,
-        dither: false,
+        dither: true,
         denominator: 8,
         delay: 5,
         mobile: false,

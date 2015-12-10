@@ -62,7 +62,7 @@ function init() {
 
     scene = new THREE.Scene();
 
-    var geometry = new THREE.SphereGeometry(5, 64, 32);
+    var geometry = new THREE.SphereGeometry(10, 64, 32);
     var material = new THREE.MeshPhongMaterial({
         color: 0xff0000,
         side: THREE.DoubleSide
@@ -86,7 +86,7 @@ function init() {
 
     pivot = new THREE.Object3D();
 
-    var step = 16;
+    var step = 32;
     var distance = 5;
     for (var ix = 0; ix <= 256; ix+= step) {
         for (var iy = 0; iy <= 256; iy+= step) {
