@@ -99,9 +99,9 @@ function GIFGenerator(renderer, opts, initCallback, onCompleteCallback) {
     defaults(opts, { 
         frames: 50,
         size: {width: 300, height: 300},
-        paletteMethod: paletteMethods.KMEANS,
+        paletteMethod: paletteMethods.NEUQUANT,
         superSample: true,
-        dither: true,
+        dither: false,
         denominator: 8,
         delay: 5,
         mobile: false,
@@ -189,13 +189,11 @@ GIFGenerator.prototype.buildPaletteNeuQuant = function(data) {
 
     var superPalette = [];
 
-    var denominator = this.denominator;
-
     for (var j = 0, jl = data.length; j < jl; j += step) {
         
-        var r = Math.floor(data[j + 0] / denominator) * denominator;
-        var g = Math.floor(data[j + 1] / denominator) * denominator;
-        var b = Math.floor(data[j + 2] / denominator) * denominator;
+        var r = data[j + 0];
+        var g = data[j + 1];
+        var b = data[j + 2];
         
         superPalette.push(r);
         superPalette.push(g);
@@ -213,7 +211,7 @@ GIFGenerator.prototype.buildPaletteNeuQuant = function(data) {
         var g = palette[i+1];
         var b = palette[i+2];
 
-        var color = r << 16 | g << 8 | b << 0;
+        var color = r << 16 | g << 8 | b;
         finalPalette.push([color, 1, r, g, b]);
     }
     return finalPalette;

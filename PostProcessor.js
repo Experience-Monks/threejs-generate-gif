@@ -169,10 +169,10 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
 
 		this.dither ? 
 		[
-		'    color += snoise(vec3(vUv.xy / pixelSize.xy * noise, time)) * 0.025; '
+		'    color += snoise(vec3(vUv.xy / pixelSize.xy * noise, time)) * 0.025; ',
+		'    color = clamp(color, ' + (1.0/256.0) + ', ' + (255.0/256.0) + ');'
 		].join('\n') : '',
 
-		'    color = clamp(color, ' + (1.0/256.0) + ', ' + (255.0/256.0) + ');',
 		'    gl_FragColor = lookup(color, tonemap);',
 
 		'    if (renderOriginal != 0)',
