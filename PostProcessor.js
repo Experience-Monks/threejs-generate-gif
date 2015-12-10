@@ -98,7 +98,8 @@ function PostProcessor(renderer, oldRenderTarget, size, tonemap, opts) {
 
 		].join('\n') : '',
 
-		'    color = clamp(color, ' + (0.5/256.0) + ', ' + (255.5/256.0) + ');',
+		'	 if (ditherStrength > 0.0)',
+		'    	color = clamp(color, ' + (0.5/256.0) + ', ' + (255.5/256.0) + ');',
 
 		'    gl_FragColor = lookup(color, tonemap);',
 
